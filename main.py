@@ -2058,7 +2058,9 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
+    df_log["Date"] = pd.to_datetime(df_log["Date"], format='ISO8601', errors='coerce', utc=True)
+    df_log["Date"] = df_log["Date"].dt.tz_convert(BR_TZ)
+
 
     intervalo_futuro = {
         "15m": timedelta(minutes=15 * 5),
@@ -2072,7 +2074,15 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     resultados = []
 
     for _, row in df_log.iterrows():
-        signal_time = pd.to_datetime(row["Date"], utc=True).tz_convert(BR_TZ)
+        try:
+            signal_time = pd.Timestamp(row["Date"]).tz_convert(BR_TZ)
+        except Exception:
+            signal_time = pd.to_datetime(row["Date"])
+            if isinstance(signal_time, np.ndarray):
+                signal_time = signal_time[0]
+            if signal_time.tzinfo is None:
+                signal_time = signal_time.tz_localize("UTC").tz_convert(BR_TZ)
+
 
         if (now - signal_time) < intervalo_futuro:
             continue  # sinal ainda recente
