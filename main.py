@@ -144,7 +144,7 @@ def load_lstm_model(asset, interval, window_size=20):
 # ====================================================
 # 2. CONFIGURAÇÕES
 # ====================================================
-ASSETS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "AVAX-USD"]# "AAVE-USD", "DOT-USD", "NEAR-USD", "ADA-USD", "VIRTUAL-USD", "PENDLE-USD"]
+ASSETS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "AVAX-USD", "AAVE-USD", "DOT-USD", "NEAR-USD", "ADA-USD", "VIRTUAL-USD", "PENDLE-USD"]
 
 
 TIMEFRAMES = [
@@ -157,7 +157,7 @@ TIMEFRAMES = [
 TELEGRAM_TOKEN = "8142008777:AAHvP5uHzEmQqR4xKyu_bfm0Vf3C8cYbmj0"
 TELEGRAM_CHAT_ID = "-4744645054"
 ALERTA_VARIACAO_MINIMA = {
-  "15m": 1.0,
+  "15m": 0.5,
   "1h": 2.0,
   "1d": 5.0,
   "1wk": 5.0
@@ -2280,7 +2280,7 @@ def run_analysis(
                     lucro_liquido = (tp1 - entry_price) * (1 - 0.003)
                     lucro_percentual_liquido = lucro_liquido / entry_price
 
-                    if range_previsto < media_range_real * 0.8 and lucro_percentual_liquido < 0.002:
+                    if range_previsto < media_range_real * 0.5 and lucro_percentual_liquido < 0.001:
                         print(f"🚫 Lucro insuficiente após ajuste. Ignorando trade.")
                         results.append({
                             "Asset": asset,
