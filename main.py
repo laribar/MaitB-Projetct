@@ -4919,15 +4919,16 @@ def agendar_analise_timeframe(tf_config):
 
     while True:
         now = datetime.now(BR_TZ)
+        deve_retreinar = is_time_to_retrain()  # ✅ verifica se é dia de re-treinar (segunda ou 1º do mês)
 
         if is_time_to_run(interval):
-            print(f"\n🚀 [{interval}] Rodando análise às {now.strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"\n🚀 [{interval}] Rodando análise às {now.strftime('%Y-%m-%d %H:%M:%S')} (retrain={deve_retreinar})")
             try:
                 run_analysis(
                     selected_timeframes=[tf_config],
                     plot_timeframes=["1h"],
                     alert_timeframes=["15m", "1h", "1d", "1wk"],
-                    retrain_models=False
+                    retrain_models=deve_retreinar
                 )
             except Exception as e:
                 print(f"❌ Erro durante análise de {interval}: {e}")
@@ -4938,29 +4939,15 @@ def agendar_analise_timeframe(tf_config):
                 ultimo_print = now
             time.sleep(30)
 
-# 🔥 Proteção para iniciar threads apenas uma vez
-if "threads_iniciadas" not in globals():
-    print("🧵 Iniciando threads para execução contínua (modo 24/7)...")
 
-    threads = []
-    for tf_config in TIMEFRAMES:
-        t = threading.Thread(target=agendar_analise_timeframe, args=(tf_config,), daemon=True)
-        t.start()
-        threads.append(t)
+# Função que verifica se é hora de re-treinar semanalmente ou mensalmente
+def is_time_to_retrain():
+    now = datetime.now(BR_TZ)
+    is_weekly = now.weekday() == 0 and now.hour == 3 and now.minute == 0  # Segunda às 03:00
+    is_monthly = now.day == 1 and now.hour == 4 and now.minute == 0       # Dia 1 às 04:00
+    return is_weekly or is_monthly
 
-    threads_iniciadas = True
-
-    print("✅ Threads iniciadas com sucesso. Sistema aguardando próximos horários de execução...")
-    # ⏳ Mantém o programa vivo mesmo depois de iniciar as threads
-    while True:
-        time.sleep(60)
-
-else:
-    print("⚠️ Threads já estavam iniciadas — sistema aguardando próximas execuções...")
-    # ⏳ Também mantém o programa vivo aqui
-    while True:
-        time.sleep(60)
-
+is_time_to_retrain()
 
 
 
