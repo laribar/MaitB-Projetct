@@ -34,6 +34,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 # Fuso horário do Brasil
 BR_TZ = pytz.timezone("America/Sao_Paulo")
+MODEL_DIR = "./models"
 
 
 # ====================================================
