@@ -1686,7 +1686,16 @@ def simular_trade(row, df):
         else:
             df.index = df.index.tz_convert(BR_TZ)
 
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+        
+        if df.index.tz is None:
+            df.index = df.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+        else:
+            df.index = df.index.tz_convert(BR_TZ)
+
         df_future = df[df.index > signal_time]
+
         if df_future.empty or not all(col in df_future.columns for col in ["High", "Low", "Close"]):
             raise ValueError("Candles futuros indisponíveis ou incompletos.")
 
@@ -4292,31 +4301,27 @@ def simular_trade(row, df):
 def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo='compra', capital=10000, max_entradas=3):
     """
     Simula um trade com entradas em grade (entradas parciais) e saída única no TP1 ou SL.
-
-    Args:
-        df_future (DataFrame): Dados futuros com colunas High, Low, Close.
-        preco_entrada (float): Preço inicial de entrada.
-        tp1 (float): Take Profit.
-        sl (float): Stop Loss.
-        tipo (str): 'compra' ou 'venda'.
-        capital (float): Capital total disponível.
-        max_entradas (int): Número máximo de entradas parciais.
-
-    Returns:
-        dict: Resultado do trade com lucro, status (TP1, SL, Sem alvo), e número de entradas realizadas.
     """
     if df_future is None or df_future.empty:
         return {'resultado': 'Sem dados', 'lucro_real': 0.0, 'tipo': tipo, 'entradas': 0}
 
+    # ✅ Corrigir índice se necessário
+    if not isinstance(df_future.index, pd.DatetimeIndex):
+        df_future.index = pd.to_datetime(df_future.index)
+
+    if df_future.index.tz is None:
+        df_future.index = df_future.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+    else:
+        df_future.index = df_future.index.tz_convert(BR_TZ)
+
     step = (tp1 - preco_entrada) / max_entradas if tipo == 'compra' else (preco_entrada - tp1) / max_entradas
     entradas = []
-    preco_atual = preco_entrada
     capital_por_entrada = capital / max_entradas
     atingiu_tp = atingiu_sl = False
 
     for i in range(max_entradas):
         preco_nivel = preco_entrada - i * step if tipo == 'compra' else preco_entrada + i * step
-        for index, row in df_future.iterrows():
+        for _, row in df_future.iterrows():
             high = row['High']
             low = row['Low']
 
@@ -4334,7 +4339,7 @@ def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo=
 
     preco_medio = sum(entradas) / len(entradas)
 
-    for index, row in df_future.iterrows():
+    for _, row in df_future.iterrows():
         high = row['High']
         low = row['Low']
         if tipo == 'compra':
@@ -4362,6 +4367,7 @@ def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo=
         close_final = df_future.iloc[-1]['Close']
         lucro = (close_final - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - close_final) * len(entradas)
         return {'resultado': 'Sem alvo', 'lucro_real': lucro, 'tipo': tipo, 'entradas': len(entradas)}
+
 
 
 def plotar_grafico_previsao_futura(df_previsao, timeframe, asset):
