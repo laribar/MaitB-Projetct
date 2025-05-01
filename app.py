@@ -71,6 +71,20 @@ def dashboard():
                            sinais=sinais,
                            caminho_grafico=caminho_imagem_destino)
 
+@app.route('/retrain', methods=['POST'])
+def retrain():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    try:
+        from main import run_analysis  # Ajuste se estiver em outro arquivo
+        run_analysis(retrain_models=True)
+        mensagem = "✅ Re-treinamento iniciado com sucesso!"
+    except Exception as e:
+        mensagem = f"❌ Erro ao iniciar re-treinamento: {e}"
+
+    return redirect(url_for('dashboard', mensagem=mensagem))
+
 # === Rota de logout ===
 @app.route('/logout')
 def logout():
