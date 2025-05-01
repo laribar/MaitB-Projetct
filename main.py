@@ -2242,7 +2242,7 @@ def run_analysis(
                 data[interval] = df
 
                 if retrain_models:
-                    print(f"🛠️ Forçando treinamento dos modelos para {asset} ({interval})")
+                    print(f"🔁 [{interval}] Re-treinando modelos para {asset} (forçado por agendamento)")
                     models[interval] = train_ml_model(df, asset=asset, interval=interval, verbose=True, force_retrain=True)
                     lstm_models[interval] = train_lstm_model_diario(df, asset=asset, interval=interval, window_size=60, force_retrain=True) if interval in ["1d", "1wk"] else train_lstm_model(df, asset=asset, interval=interval, window_size=20, force_retrain=True)
                 else:
