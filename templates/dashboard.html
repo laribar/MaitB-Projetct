@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📊 Dashboard do Bot</title>
+</head>
+<body>
+    <h1>📊 Últimos Sinais</h1>
+    <table border="1">
+        <tr>
+            <th>Data</th>
+            <th>Ativo</th>
+            <th>Timeframe</th>
+            <th>Preço</th>
+            <th>Sinal</th>
+            <th>Resultado</th>
+            <th>Lucro</th>
+        </tr>
+        {% for row in signals %}
+        <tr>
+            <td>{{ row.Date }}</td>
+            <td>{{ row.Asset }}</td>
+            <td>{{ row.Timeframe }}</td>
+            <td>{{ row.Price }}</td>
+            <td>{{ row.Signal }}</td>
+            <td>{{ row.Resultado }}</td>
+            <td>{{ row.LucroEstimado }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>💼 Gráfico da Carteira</h2>
+    <img src="/grafico" width="700">
+</body>
+</html>
