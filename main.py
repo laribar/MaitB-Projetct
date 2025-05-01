@@ -2072,6 +2072,21 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     df_log["Date"] = pd.to_datetime(df_log["Date"], format='ISO8601', errors='coerce', utc=True)
     df_log["Date"] = df_log["Date"].dt.tz_convert(BR_TZ)
 
+    # ✅ Corrigir o índice do df_candles
+    if df_candles is None or df_candles.empty:
+        print("⚠️ df_candles ausente ou vazio.")
+        return
+
+    # 🛡️ Corrigir timezone e tipo do índice
+    try:
+        df_candles.index = pd.to_datetime(df_candles.index)
+        if df_candles.index.tz is None:
+            df_candles.index = df_candles.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+        else:
+            df_candles.index = df_candles.index.tz_convert(BR_TZ)
+    except Exception as e:
+        print(f"❌ Erro ao ajustar timezone de df_candles: {e}")
+        return
 
     intervalo_futuro = {
         "15m": timedelta(minutes=15 * 5),
@@ -2094,25 +2109,28 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
             if signal_time.tzinfo is None:
                 signal_time = signal_time.tz_localize("UTC").tz_convert(BR_TZ)
 
-
         if (now - signal_time) < intervalo_futuro:
-            continue  # sinal ainda recente
+            continue
 
         if str(row["Signal"]) != "1":
-            continue  # ignora sinais descartados ou neutros
+            continue
 
         try:
-            # Verifica se os campos necessários existem e são válidos
             tp1 = float(row["TP1"]) if pd.notna(row["TP1"]) else None
             sl = float(row["SL"]) if pd.notna(row["SL"]) else None
             entry = float(row["Entry"]) if pd.notna(row["Entry"]) else None
 
-            if None in [tp1, sl, entry] or df_candles is None:
+            if None in [tp1, sl, entry]:
                 continue
 
             tipo = "compra" if int(row["Signal"]) == 1 else "venda"
+
+            df_future = df_candles[df_candles.index > signal_time]
+            if df_future.empty:
+                continue
+
             resultado = simular_trade_com_entradas_em_grade(
-                df_future=df_candles[df_candles.index > signal_time],
+                df_future=df_future,
                 preco_entrada=entry,
                 tp1=tp1,
                 sl=sl,
@@ -2123,7 +2141,6 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
             for key, value in resultado.items():
                 row[key] = value
 
-            # Atualiza carteira
             carteira_virtual["capital_atual"] += row.get("lucro_real", 0.0)
             carteira_virtual["historico_capital"].append(carteira_virtual["capital_atual"])
             carteira_virtual["capital_maximo"] = max(carteira_virtual["capital_maximo"], carteira_virtual["capital_atual"])
@@ -2131,7 +2148,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
             row["Capital Atual"] = round(carteira_virtual["capital_atual"], 2)
             row["LucroEstimado"] = round(row.get("lucro_real", 0.0), 2)
             row["Resultado"] = resultado.get("resultado")
-            row["DuracaoMin"] = None  # não calculado aqui
+            row["DuracaoMin"] = None
             row["Acertou"] = 1 if resultado.get("resultado") == "TP1" else 0 if resultado.get("resultado") == "SL" else None
 
             resultados.append(row)
@@ -2151,6 +2168,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     print(f"📋 Log de previsões atualizado com resultados e capital: {prediction_log_path}")
     plotar_grafico_lucro(df_resultados)
     salvar_grafico_evolucao()
+
 
 
 
@@ -4300,12 +4318,12 @@ def simular_trade(row, df):
 
 def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo='compra', capital=10000, max_entradas=3):
     """
-    Simula um trade com entradas em grade (entradas parciais) e saída única no TP1 ou SL.
+    Simula um trade com entradas parciais (em grade) e saída única no TP1 ou SL.
     """
     if df_future is None or df_future.empty:
         return {'resultado': 'Sem dados', 'lucro_real': 0.0, 'tipo': tipo, 'entradas': 0}
 
-    # ✅ Corrigir índice se necessário
+    # Garantir índice correto
     if not isinstance(df_future.index, pd.DatetimeIndex):
         df_future.index = pd.to_datetime(df_future.index)
 
@@ -4314,59 +4332,72 @@ def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo=
     else:
         df_future.index = df_future.index.tz_convert(BR_TZ)
 
-    step = (tp1 - preco_entrada) / max_entradas if tipo == 'compra' else (preco_entrada - tp1) / max_entradas
+    # Parâmetros da entrada em grade
+    step = abs(tp1 - preco_entrada) / max_entradas
     entradas = []
     capital_por_entrada = capital / max_entradas
     atingiu_tp = atingiu_sl = False
 
+    # Executar entradas parciais
     for i in range(max_entradas):
         preco_nivel = preco_entrada - i * step if tipo == 'compra' else preco_entrada + i * step
         for _, row in df_future.iterrows():
-            high = row['High']
-            low = row['Low']
-
-            if tipo == 'compra':
-                if low <= preco_nivel <= high:
-                    entradas.append(preco_nivel)
-                    break
-            else:
-                if low <= preco_nivel <= high:
-                    entradas.append(preco_nivel)
-                    break
+            try:
+                high = row['High']
+                low = row['Low']
+                if tipo == 'compra':
+                    if low <= preco_nivel <= high:
+                        entradas.append(preco_nivel)
+                        break
+                else:
+                    if low <= preco_nivel <= high:
+                        entradas.append(preco_nivel)
+                        break
+            except Exception as e:
+                print(f"⚠️ Erro ao verificar entrada: {e}")
+                continue
 
     if not entradas:
         return {'resultado': 'Sem entrada', 'lucro_real': 0.0, 'tipo': tipo, 'entradas': 0}
 
     preco_medio = sum(entradas) / len(entradas)
 
+    # Verificar se TP ou SL foram atingidos
     for _, row in df_future.iterrows():
-        high = row['High']
-        low = row['Low']
-        if tipo == 'compra':
-            if low <= sl:
-                atingiu_sl = True
-                break
-            elif high >= tp1:
-                atingiu_tp = True
-                break
-        else:
-            if high >= sl:
-                atingiu_sl = True
-                break
-            elif low <= tp1:
-                atingiu_tp = True
-                break
+        try:
+            high = row['High']
+            low = row['Low']
+            if tipo == 'compra':
+                if low <= sl:
+                    atingiu_sl = True
+                    break
+                elif high >= tp1:
+                    atingiu_tp = True
+                    break
+            else:
+                if high >= sl:
+                    atingiu_sl = True
+                    break
+                elif low <= tp1:
+                    atingiu_tp = True
+                    break
+        except Exception as e:
+            print(f"⚠️ Erro ao verificar TP/SL: {e}")
+            continue
 
     if atingiu_tp:
         lucro = (tp1 - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - tp1) * len(entradas)
-        return {'resultado': 'TP1', 'lucro_real': lucro, 'tipo': tipo, 'entradas': len(entradas)}
+        return {'resultado': 'TP1', 'lucro_real': round(lucro, 2), 'tipo': tipo, 'entradas': len(entradas)}
+
     elif atingiu_sl:
         perda = (sl - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - sl) * len(entradas)
-        return {'resultado': 'SL', 'lucro_real': perda, 'tipo': tipo, 'entradas': len(entradas)}
+        return {'resultado': 'SL', 'lucro_real': round(perda, 2), 'tipo': tipo, 'entradas': len(entradas)}
+
     else:
         close_final = df_future.iloc[-1]['Close']
         lucro = (close_final - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - close_final) * len(entradas)
-        return {'resultado': 'Sem alvo', 'lucro_real': lucro, 'tipo': tipo, 'entradas': len(entradas)}
+        return {'resultado': 'Sem alvo', 'lucro_real': round(lucro, 2), 'tipo': tipo, 'entradas': len(entradas)}
+
 
 
 
