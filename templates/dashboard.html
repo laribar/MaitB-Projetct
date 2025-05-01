@@ -1,34 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <title>📊 Dashboard do Bot</title>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <h1>📊 Últimos Sinais</h1>
-    <table border="1">
-        <tr>
-            <th>Data</th>
-            <th>Ativo</th>
-            <th>Timeframe</th>
-            <th>Preço</th>
-            <th>Sinal</th>
-            <th>Resultado</th>
-            <th>Lucro</th>
-        </tr>
-        {% for row in signals %}
-        <tr>
-            <td>{{ row.Date }}</td>
-            <td>{{ row.Asset }}</td>
-            <td>{{ row.Timeframe }}</td>
-            <td>{{ row.Price }}</td>
-            <td>{{ row.Signal }}</td>
-            <td>{{ row.Resultado }}</td>
-            <td>{{ row.LucroEstimado }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <h2>💼 Gráfico da Carteira</h2>
-    <img src="/grafico" width="700">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Dashboard de Trading</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">Olá, {{ usuario }}</span>
+                <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-4">
+        <h2>Últimos Sinais - Timeframe: {{ timeframe_selecionado }}</h2>
+        <form method="get" class="mb-3">
+            <label for="timeframe" class="form-label">Selecionar Timeframe:</label>
+            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                {% for tf in timeframes %}
+                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Ativo</th>
+                    <th>Direção</th>
+                    <th>Confiança</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sinal in sinais %}
+                    <tr>
+                        <td>{{ sinal['data'] }}</td>
+                        <td>{{ sinal['ativo'] }}</td>
+                        <td>{{ sinal['direcao'] }}</td>
+                        <td>{{ sinal['confianca'] }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h3>Gráfico de Evolução da Carteira</h3>
+        <img src="{{ url_for('static', filename='images/evolucao_carteira_virtual.png') }}" class="img-fluid" alt="Gráfico de Evolução">
+    </div>
 </body>
 </html>
