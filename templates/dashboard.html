@@ -25,6 +25,13 @@
                 {% endfor %}
             </select>
         </form>
+    {% if request.args.get('mensagem') %}
+    <div class="alert alert-info">{{ request.args.get('mensagem') }}</div>
+    {% endif %}
+    
+    <form method="POST" action="{{ url_for('retrain') }}">
+        <button class="btn btn-warning mb-4">🔁 Re-treinar agora</button>
+    </form>
 
         {% if sinais %}
             <div class="table-responsive">
