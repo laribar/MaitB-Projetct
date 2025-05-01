@@ -2,22 +2,22 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <title>Dashboard de Trading</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">Dashboard de Trading</a>
-            <div class="d-flex">
-                <span class="navbar-text me-3">Olá, {{ usuario }}</span>
-                <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
-            </div>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+        <a class="navbar-brand" href="#">📊 Dashboard de Trading</a>
+        <div class="ms-auto d-flex align-items-center">
+            <span class="navbar-text text-white me-3">Olá, {{ usuario }}</span>
+            <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
         </div>
     </nav>
+
     <div class="container mt-4">
-        <h2>Últimos Sinais - Timeframe: {{ timeframe_selecionado }}</h2>
-        <form method="get" class="mb-3">
+        <h2 class="mb-4">📈 Últimos Sinais - Timeframe: {{ timeframe_selecionado }}</h2>
+
+        <form method="get" class="mb-4">
             <label for="timeframe" class="form-label">Selecionar Timeframe:</label>
             <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
                 {% for tf in timeframes %}
@@ -25,28 +25,46 @@
                 {% endfor %}
             </select>
         </form>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Ativo</th>
-                    <th>Direção</th>
-                    <th>Confiança</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sinal in sinais %}
-                    <tr>
-                        <td>{{ sinal['data'] }}</td>
-                        <td>{{ sinal['ativo'] }}</td>
-                        <td>{{ sinal['direcao'] }}</td>
-                        <td>{{ sinal['confianca'] }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <h3>Gráfico de Evolução da Carteira</h3>
-        <img src="{{ url_for('static', filename='images/evolucao_carteira_virtual.png') }}" class="img-fluid" alt="Gráfico de Evolução">
+
+        {% if sinais %}
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered align-middle text-center">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Data</th>
+                            <th>Ativo</th>
+                            <th>Direção</th>
+                            <th>Confiança</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sinal in sinais %}
+                            <tr>
+                                <td>{{ sinal['Date'] }}</td>
+                                <td>{{ sinal['Asset'] }}</td>
+                                <td>
+                                    {% if sinal['Signal'] == 1 %}
+                                        🟢 Compra
+                                    {% elif sinal['Signal'] == 0 %}
+                                        🔴 Venda
+                                    {% else %}
+                                        ⚪ Neutro
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(sinal['AdjustedProb']|float * 100) }}%</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
+        {% endif %}
+
+        <hr class="my-4">
+
+        <h3>📊 Gráfico de Evolução da Carteira</h3>
+        <img src="{{ caminho_grafico }}" class="img-fluid border rounded" alt="Gráfico de Evolução da Carteira">
     </div>
 </body>
 </html>
