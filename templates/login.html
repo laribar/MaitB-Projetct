@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+    <title>Login - Trading Bot</title>
+</head>
+<body>
+    <h2>🔐 Login</h2>
+    {% if error %}
+      <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    <form method="POST">
+        <input type="text" name="username" placeholder="Usuário"><br>
+        <input type="password" name="password" placeholder="Senha"><br>
+        <input type="submit" value="Entrar">
+    </form>
+</body>
+</html>
