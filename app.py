@@ -3,11 +3,10 @@ import pandas as pd
 import os
 import shutil
 
-# 🔁 Ajuste aqui se sua função estiver em outro arquivo:
-from main import plotar_grafico_carteira_virtual  # <- use o nome correto do seu script principal
+from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste o nome se o seu script principal for diferente
 
 app = Flask(__name__)
-app.secret_key = 'sua_chave_secreta'
+app.secret_key = 'sua_chave_secreta'  # troque por algo seguro em produção
 
 # === Rota de login ===
 @app.route('/', methods=['GET', 'POST'])
@@ -33,7 +32,7 @@ def dashboard():
     caminho_imagem_destino = 'static/images/evolucao_carteira_virtual.png'
     caminho_imagem_origem = 'evolucao_carteira_virtual.png'
 
-    # Gera gráfico se não existir
+    # Gera gráfico da carteira se não existir
     if not os.path.exists(caminho_imagem_destino):
         if os.path.exists(caminho_csv):
             try:
@@ -64,20 +63,23 @@ def dashboard():
         except Exception as e:
             print(f"Erro ao carregar o prediction_log.csv: {e}")
 
+    mensagem = request.args.get('mensagem')
+
     return render_template('dashboard.html',
                            usuario=session['usuario'],
                            timeframes=timeframes,
                            timeframe_selecionado=timeframe_selecionado,
                            sinais=sinais,
-                           caminho_grafico=caminho_imagem_destino)
+                           caminho_grafico=caminho_imagem_destino,
+                           mensagem=mensagem)
 
+# === Rota de re-treinamento manual ===
 @app.route('/retrain', methods=['POST'])
 def retrain():
     if 'usuario' not in session:
         return redirect(url_for('login'))
 
     try:
-        from main import run_analysis  # Ajuste se estiver em outro arquivo
         run_analysis(retrain_models=True)
         mensagem = "✅ Re-treinamento iniciado com sucesso!"
     except Exception as e:
@@ -91,6 +93,6 @@ def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-# === Executar servidor Flask ===
+# === Iniciar o servidor Flask ===
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
