@@ -1527,10 +1527,22 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
     import matplotlib.dates as mdates
     import os
 
+    # ✅ Proteção: checar colunas e dados
+    if df.empty or "Asset" not in df.columns or "LSTM_High_Predicted" not in df.columns:
+        print(f"⚠️ Dados insuficientes para gráfico {asset} ({timeframe})")
+        return
+
     df = df[df["Asset"] == asset].copy()
     if df.empty:
-        print(f"⚠️ Nenhum dado para {asset} ({timeframe}) no gráfico.")
+        print(f"⚠️ Nenhum dado encontrado para {asset} ({timeframe}) no gráfico.")
         return
+
+    # ✅ Checar colunas necessárias
+    required_cols = ["Date", "LSTM_High_Predicted", "LSTM_Low_Predicted", "TargetPrice", "Price"]
+    for col in required_cols:
+        if col not in df.columns:
+            print(f"⚠️ Coluna obrigatória ausente: {col}")
+            return
 
     df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_convert(BR_TZ)
 
@@ -1541,10 +1553,16 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
         high = df["LSTM_High_Predicted"].iloc[i]
         low = df["LSTM_Low_Predicted"].iloc[i]
         close = df["TargetPrice"].iloc[i]
+        real = df["Price"].iloc[i]
 
-        cor = "blue"
+        cor = "green" if close >= real else "red"
         plt.vlines(date, ymin=low, ymax=high, color=cor, linewidth=2)
         plt.plot(date, close, marker="o", color=cor)
+
+        plt.annotate(f"{close:.0f}", (date, close), xytext=(0, 8),
+                     textcoords="offset points", ha='center', fontsize=8, color=cor)
+        plt.annotate(f"{real:.0f}", (date, real), xytext=(0, -12),
+                     textcoords="offset points", ha='center', fontsize=8, color="black")
 
     plt.plot(df["Date"], df["Price"], label="📈 Preço Real", marker="x", color="black")
     plt.title(f"📊 Projeção LSTM (High/Low/Close) — {asset} ({timeframe})")
@@ -1560,15 +1578,7 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
     plt.savefig(path)
     plt.close()
 
-    # ✅ Exibe o gráfico no terminal
-    plt.figure(figsize=(12, 5))
-    plt.title(f"📊 Projeção LSTM (High/Low/Close) — {asset} ({timeframe})")
-    plt.xlabel("Data")
-    plt.ylabel("Preço")
-    plt.tight_layout()
-    plt.show()
-
-
+    print(f"✅ Gráfico salvo: {path}")
 
 
 
@@ -1967,6 +1977,7 @@ def plotar_grafico_previsao_real(df, timeframe, asset):
 
 def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
     import matplotlib.pyplot as plt
+    import pandas as pd
     import os
 
     if not os.path.exists(log_path):
@@ -1978,7 +1989,18 @@ def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
         print("⚠️ Log de previsões vazio ou inválido.")
         return
 
+    # ✅ Verificação de colunas necessárias
+    required_cols = ["Date", "Capital Atual", "Resultado"]
+    for col in required_cols:
+        if col not in df.columns:
+            print(f"⚠️ Coluna obrigatória ausente no log: {col}")
+            return
+
     df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
+    if df.empty:
+        print("⚠️ Dados vazios após limpeza. Nada a plotar.")
+        return
+
     df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_convert(BR_TZ)
     df = df[df["Resultado"].isin(["TP1", "SL", "Sem alvo"])]
 
@@ -1995,8 +2017,11 @@ def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
     plt.plot(df["Date"], df["Capital Atual"], linestyle="--", color="blue", alpha=0.7)
 
     for idx, row in df.iterrows():
-        plt.annotate(f"${row['Capital Atual']:.0f}", (row["Date"], row["Capital Atual"]),
-                     textcoords="offset points", xytext=(0, 6), ha='center', fontsize=8)
+        try:
+            plt.annotate(f"${row['Capital Atual']:.0f}", (row["Date"], row["Capital Atual"]),
+                         textcoords="offset points", xytext=(0, 6), ha='center', fontsize=8)
+        except Exception:
+            continue
 
     plt.title("💰 Evolução da Carteira Virtual")
     plt.xlabel("Data (BR)")
@@ -2005,14 +2030,12 @@ def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
     plt.grid(True)
     plt.tight_layout()
 
-    # 🔥 Novo: salvar o gráfico em ./
     path = "./evolucao_carteira_virtual.png"
     plt.savefig(path)
-    print(f"💾 Gráfico da carteira salvo em: {path}")
-
-    # 🔥 Novo: mostrar no terminal
-    plt.show()
     plt.close()
+
+    print(f"✅ Gráfico da carteira salvo: {path}")
+
 
 
 def plotar_grafico_lucro(df):
