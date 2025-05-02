@@ -4343,10 +4343,12 @@ def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo=
     """
     Simula um trade com entradas parciais (em grade) e saída única no TP1 ou SL.
     """
-    if df_future is None or df_future.empty:
+    # 🛡️ Proteção contra DataFrame vazio ou colunas ausentes
+    if df_future is None or df_future.empty or not all(col in df_future.columns for col in ["High", "Low", "Close"]):
+        print(f"⚠️ Dados futuros indisponíveis ou incompletos, pulando.")
         return {'resultado': 'Sem dados', 'lucro_real': 0.0, 'tipo': tipo, 'entradas': 0}
 
-    # Garantir índice correto
+    # ✅ Garantir índice como DateTime com timezone
     if not isinstance(df_future.index, pd.DatetimeIndex):
         df_future.index = pd.to_datetime(df_future.index)
 
@@ -4355,71 +4357,58 @@ def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo=
     else:
         df_future.index = df_future.index.tz_convert(BR_TZ)
 
-    # Parâmetros da entrada em grade
-    step = abs(tp1 - preco_entrada) / max_entradas
+    step = (tp1 - preco_entrada) / max_entradas if tipo == 'compra' else (preco_entrada - tp1) / max_entradas
     entradas = []
     capital_por_entrada = capital / max_entradas
     atingiu_tp = atingiu_sl = False
 
-    # Executar entradas parciais
     for i in range(max_entradas):
         preco_nivel = preco_entrada - i * step if tipo == 'compra' else preco_entrada + i * step
         for _, row in df_future.iterrows():
-            try:
-                high = row['High']
-                low = row['Low']
-                if tipo == 'compra':
-                    if low <= preco_nivel <= high:
-                        entradas.append(preco_nivel)
-                        break
-                else:
-                    if low <= preco_nivel <= high:
-                        entradas.append(preco_nivel)
-                        break
-            except Exception as e:
-                print(f"⚠️ Erro ao verificar entrada: {e}")
-                continue
+            high = row['High']
+            low = row['Low']
+
+            if tipo == 'compra' and low <= preco_nivel <= high:
+                entradas.append(preco_nivel)
+                break
+            elif tipo == 'venda' and low <= preco_nivel <= high:
+                entradas.append(preco_nivel)
+                break
 
     if not entradas:
         return {'resultado': 'Sem entrada', 'lucro_real': 0.0, 'tipo': tipo, 'entradas': 0}
 
     preco_medio = sum(entradas) / len(entradas)
 
-    # Verificar se TP ou SL foram atingidos
     for _, row in df_future.iterrows():
-        try:
-            high = row['High']
-            low = row['Low']
-            if tipo == 'compra':
-                if low <= sl:
-                    atingiu_sl = True
-                    break
-                elif high >= tp1:
-                    atingiu_tp = True
-                    break
-            else:
-                if high >= sl:
-                    atingiu_sl = True
-                    break
-                elif low <= tp1:
-                    atingiu_tp = True
-                    break
-        except Exception as e:
-            print(f"⚠️ Erro ao verificar TP/SL: {e}")
-            continue
+        high = row['High']
+        low = row['Low']
+        if tipo == 'compra':
+            if low <= sl:
+                atingiu_sl = True
+                break
+            elif high >= tp1:
+                atingiu_tp = True
+                break
+        else:
+            if high >= sl:
+                atingiu_sl = True
+                break
+            elif low <= tp1:
+                atingiu_tp = True
+                break
 
     if atingiu_tp:
         lucro = (tp1 - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - tp1) * len(entradas)
         return {'resultado': 'TP1', 'lucro_real': round(lucro, 2), 'tipo': tipo, 'entradas': len(entradas)}
-
     elif atingiu_sl:
         perda = (sl - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - sl) * len(entradas)
         return {'resultado': 'SL', 'lucro_real': round(perda, 2), 'tipo': tipo, 'entradas': len(entradas)}
-
     else:
         close_final = df_future.iloc[-1]['Close']
         lucro = (close_final - preco_medio) * len(entradas) if tipo == 'compra' else (preco_medio - close_final) * len(entradas)
         return {'resultado': 'Sem alvo', 'lucro_real': round(lucro, 2), 'tipo': tipo, 'entradas': len(entradas)}
+
 
 
 
