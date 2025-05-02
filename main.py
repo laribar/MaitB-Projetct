@@ -1683,6 +1683,20 @@ def exibir_status_carteira():
 
 def simular_trade(row, df):
     try:
+        # Proteções iniciais
+        if df is None or df.empty or not all(col in df.columns for col in ["High", "Low", "Close"]):
+            print(f"⚠️ Dados de candles futuros indisponíveis ou incompletos para {row.get('Asset')} ({row.get('Timeframe')}).")
+            return {
+                "Resultado": "Sem dados",
+                "PrecoSaida": None,
+                "LucroEstimado": None,
+                "DuracaoMin": None,
+                "Capital Atual": carteira_virtual["capital_atual"],
+                "Quantidade": None,
+                "ROI": None,
+                "Drawdown": None
+            }
+
         asset = row["Asset"]
         timeframe = row["Timeframe"]
         signal_time = pd.to_datetime(row["Date"], utc=True).astimezone(BR_TZ)
@@ -1691,29 +1705,32 @@ def simular_trade(row, df):
         tp1 = float(row["TP1"])
         sl = float(row["SL"])
 
-        if df.index.tz is None:
-            df.index = df.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
-        else:
-            df.index = df.index.tz_convert(BR_TZ)
-
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-        
+        # Ajuste de timezone e índice
+        df.index = pd.to_datetime(df.index)
         if df.index.tz is None:
             df.index = df.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
         else:
             df.index = df.index.tz_convert(BR_TZ)
 
         df_future = df[df.index > signal_time]
+        if df_future.empty:
+            print(f"⚠️ Nenhum candle futuro disponível para {asset} ({timeframe}).")
+            return {
+                "Resultado": "Sem dados futuros",
+                "PrecoSaida": None,
+                "LucroEstimado": None,
+                "DuracaoMin": None,
+                "Capital Atual": carteira_virtual["capital_atual"],
+                "Quantidade": None,
+                "ROI": None,
+                "Drawdown": None
+            }
 
-        if df_future.empty or not all(col in df_future.columns for col in ["High", "Low", "Close"]):
-            raise ValueError("Candles futuros indisponíveis ou incompletos.")
-
-        # 🟡 Taxas e slippage
-        taxa_percentual = 0.001  # 0.1% por operação
-        slippage_percentual = 0.002  # 0.2% por operação
-
+        # Parâmetros
+        taxa_percentual = 0.001
+        slippage_percentual = 0.002
         entrada_executada = False
+
         for i, (idx, candle) in enumerate(df_future.iterrows()):
             high = float(candle["High"])
             low = float(candle["Low"])
@@ -1730,28 +1747,24 @@ def simular_trade(row, df):
                 continue
 
             if entrada_executada:
-                preco_max = float(candle["High"])
-                preco_min = float(candle["Low"])
-
                 if row["Signal"] == 1:
-                    if preco_min <= sl:
+                    if low <= sl:
                         resultado = "SL"
                         preco_saida = sl
                         break
-                    elif preco_max >= tp1:
+                    elif high >= tp1:
                         resultado = "TP1"
                         preco_saida = tp1
                         break
                 elif row["Signal"] == 0:
-                    if preco_max >= sl:
+                    if high >= sl:
                         resultado = "SL"
                         preco_saida = sl
                         break
-                    elif preco_min <= tp1:
+                    elif low <= tp1:
                         resultado = "TP1"
                         preco_saida = tp1
                         break
-
         else:
             if entrada_executada:
                 resultado = "Sem alvo"
@@ -1768,22 +1781,15 @@ def simular_trade(row, df):
                     "Drawdown": None
                 }
 
+        # Cálculo de lucro
         capital_disponivel = carteira_virtual["capital_atual"]
         risco_por_trade = 0.01
         risco_trade = abs(preco_real_entrada - sl)
+        capital_por_trade = (capital_disponivel * risco_por_trade) / risco_trade if risco_trade > 0 else capital_disponivel * 0.01
 
-        if risco_trade <= 0:
-            capital_por_trade = capital_disponivel * 0.01
-        else:
-            capital_por_trade = (capital_disponivel * risco_por_trade) / risco_trade
-
-        quantidade = capital_por_trade
-        if quantidade * preco_real_entrada > capital_disponivel * 0.10:
-            quantidade = (capital_disponivel * 0.10) / preco_real_entrada
-
+        quantidade = min(capital_por_trade, capital_disponivel * 0.10 / preco_real_entrada)
         quantidade = max(quantidade, 0.0001)
 
-        # 🔥 Cálculo de lucro com taxa + slippage
         if row["Signal"] == 1:
             lucro_total = (preco_saida - preco_real_entrada) * quantidade
         else:
@@ -1794,9 +1800,7 @@ def simular_trade(row, df):
 
         carteira_virtual["capital_atual"] += lucro_total
         carteira_virtual["historico_capital"].append(carteira_virtual["capital_atual"])
-
-        if carteira_virtual["capital_atual"] > carteira_virtual["capital_maximo"]:
-            carteira_virtual["capital_maximo"] = carteira_virtual["capital_atual"]
+        carteira_virtual["capital_maximo"] = max(carteira_virtual["capital_maximo"], carteira_virtual["capital_atual"])
 
         drawdown = 1 - (carteira_virtual["capital_atual"] / carteira_virtual["capital_maximo"])
         roi = (carteira_virtual["capital_atual"] / carteira_virtual["capital_inicial"]) - 1
@@ -1825,6 +1829,7 @@ def simular_trade(row, df):
             "ROI": None,
             "Drawdown": None
         }
+
 
 def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo='compra', capital=10000, max_entradas=3):
     """
