@@ -93,6 +93,6 @@ def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-# === Iniciar o servidor Flask ===
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+# === Gunicorn gerencia o servidor. Nada deve rodar aqui diretamente. ===
+pass
+
