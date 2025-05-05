@@ -25,13 +25,14 @@
                 {% endfor %}
             </select>
         </form>
-    {% if request.args.get('mensagem') %}
-    <div class="alert alert-info">{{ request.args.get('mensagem') }}</div>
-    {% endif %}
-    
-    <form method="POST" action="{{ url_for('retrain') }}">
-        <button class="btn btn-warning mb-4">🔁 Re-treinar agora</button>
-    </form>
+
+        {% if request.args.get('mensagem') %}
+            <div class="alert alert-info">{{ request.args.get('mensagem') }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('retrain') }}">
+            <button class="btn btn-warning mb-4">🔁 Re-treinar agora</button>
+        </form>
 
         {% if sinais %}
             <div class="table-responsive">
@@ -40,8 +41,8 @@
                         <tr>
                             <th>Data</th>
                             <th>Ativo</th>
-                            <th>Direção</th>
-                            <th>Confiança</th>
+                            <th>Projeção (LSTM)</th>
+                            <th>Preço Real</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,16 +50,8 @@
                             <tr>
                                 <td>{{ sinal['Date'] }}</td>
                                 <td>{{ sinal['Asset'] }}</td>
-                                <td>
-                                    {% if sinal['Signal'] == 1 %}
-                                        🟢 Compra
-                                    {% elif sinal['Signal'] == 0 %}
-                                        🔴 Venda
-                                    {% else %}
-                                        ⚪ Neutro
-                                    {% endif %}
-                                </td>
-                                <td>{{ "%.2f"|format(sinal['AdjustedProb']|float * 100) }}%</td>
+                                <td>{{ sinal['TargetPrice'] }}</td>
+                                <td>{{ sinal['Price'] }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
