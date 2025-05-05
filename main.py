@@ -2512,27 +2512,29 @@ def agendar_analise_timeframe(tf_config):
             time.sleep(30)
 
 # 🔥 Proteção para iniciar threads apenas uma vez
-if "threads_iniciadas" not in globals():
-    print("🧵 Iniciando threads para execução contínua (modo 24/7)...")
+# 🔁 Execução contínua desativada — será feito via cron
+# (use executar_analise.py e agende com crontab)
+#if "threads_iniciadas" not in globals():
+#    print("🧵 Iniciando threads para execução contínua (modo 24/7)...")
 
-    threads = []
-    for tf_config in TIMEFRAMES:
-        t = threading.Thread(target=agendar_analise_timeframe, args=(tf_config,), daemon=True)
-        t.start()
-        threads.append(t)
+#    threads = []
+#   for tf_config in TIMEFRAMES:
+#        t = threading.Thread(target=agendar_analise_timeframe, args=(tf_config,), daemon=True)
+#        t.start()
+#        threads.append(t)
 
-    threads_iniciadas = True
+#    threads_iniciadas = True
 
-    print("✅ Threads iniciadas com sucesso. Sistema aguardando próximos horários de execução...")
+#    print("✅ Threads iniciadas com sucesso. Sistema aguardando próximos horários de execução...")
     # ⏳ Mantém o programa vivo mesmo depois de iniciar as threads
-    while True:
-        time.sleep(60)
+#    while True:
+#        time.sleep(60)
 
-else:
-    print("⚠️ Threads já estavam iniciadas — sistema aguardando próximas execuções...")
+#else:
+#    print("⚠️ Threads já estavam iniciadas — sistema aguardando próximas execuções...")
     # ⏳ Também mantém o programa vivo aqui
-    while True:
-        time.sleep(60)
+#    while True:
+#        time.sleep(60)
 
 
 
