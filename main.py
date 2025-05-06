@@ -2205,6 +2205,11 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
                 continue
 
             tipo = "compra" if int(row["Signal"]) == 1 else "venda"
+            df_candles.index = pd.to_datetime(df_candles.index)
+            if df_candles.index.tz is None:
+                df_candles.index = df_candles.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+            else:
+                df_candles.index = df_candles.index.tz_convert(BR_TZ)
 
             df_future = df_candles[df_candles.index > signal_time]
             if df_future.empty:
