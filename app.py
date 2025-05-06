@@ -93,6 +93,7 @@ def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
-# === Gunicorn gerencia o servidor. Nada deve rodar aqui diretamente. ===
-pass
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
 
