@@ -1602,7 +1602,8 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
         print(f"⚠️ Dados insuficientes para gráfico {asset} ({timeframe})")
         return
 
-    df = df[df["Asset"] == asset].copy()
+    df = df.copy()
+
     if df.empty:
         print(f"⚠️ Nenhum dado encontrado para {asset} ({timeframe}) no gráfico.")
         return
