@@ -2062,7 +2062,12 @@ def plotar_grafico_carteira_virtual():
             print("⚠️ Colunas estão vazias ou com valores ausentes, gráfico não gerado.")
             return
 
-        df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
+        if all(col in df.columns for col in ["Date", "Capital Atual", "Resultado"]):
+            df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
+        else:
+            print("⚠️ CSV não contém colunas 'Date', 'Capital Atual' e 'Resultado'. Gráfico não será gerado.")
+            return
+
         df["Date"] = pd.to_datetime(df["Date"])
         df = df.sort_values("Date")
 
