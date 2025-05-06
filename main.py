@@ -159,7 +159,7 @@ TELEGRAM_TOKEN = "8142008777:AAHvP5uHzEmQqR4xKyu_bfm0Vf3C8cYbmj0"
 TELEGRAM_CHAT_ID = "-4744645054"
 ALERTA_VARIACAO_MINIMA = {
   "15m": 0.5,
-  "1h": 2.0,
+  "1h": 1.0,
   "1d": 5.0,
   "1wk": 5.0
 }
