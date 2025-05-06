@@ -2030,66 +2030,41 @@ def plotar_grafico_previsao_real(df, timeframe, asset):
     plt.show()
 
 
-def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import os
-
-    if not os.path.exists(log_path):
-        print("❌ Arquivo de log não encontrado.")
-        return
-
-    df = safe_read_csv(log_path)
-    if df is None or df.empty:
-        print("⚠️ Log de previsões vazio ou inválido.")
-        return
-
-    # ✅ Verificação de colunas necessárias
-    required_cols = ["Date", "Capital Atual", "Resultado"]
-    for col in required_cols:
-        if col not in df.columns:
-            print(f"⚠️ Coluna obrigatória ausente no log: {col}")
+def plotar_grafico_carteira_virtual():
+    try:
+        df = safe_read_csv("prediction_log.csv")
+        if df.empty:
+            print("⚠️ Log está vazio. Nenhum gráfico será gerado.")
             return
 
-    df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
-    if df.empty:
-        print("⚠️ Dados vazios após limpeza. Nada a plotar.")
-        return
+        colunas_necessarias = {"Date", "Capital Atual", "Resultado"}
+        if not colunas_necessarias.issubset(df.columns):
+            print(f"⚠️ Colunas ausentes no CSV para gráfico: {colunas_necessarias - set(df.columns)}")
+            return
 
-    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_convert(BR_TZ)
-    df = df[df["Resultado"].isin(["TP1", "SL", "Sem alvo"])]
+        df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
+        df["Date"] = pd.to_datetime(df["Date"])
 
-    if df.empty:
-        print("⚠️ Nenhuma simulação válida para exibir no gráfico.")
-        return
+        df = df.sort_values("Date")
 
-    plt.figure(figsize=(12, 6))
+        plt.figure(figsize=(12, 6))
+        plt.plot(df["Date"], df["Capital Atual"], label="Capital Atual", color="blue")
 
-    cor_map = {"TP1": "green", "SL": "red", "Sem alvo": "orange"}
-    cores = df["Resultado"].map(cor_map).fillna("gray")
+        for i, row in df.iterrows():
+            cor = "green" if row["Resultado"] == "TP1" else "red" if row["Resultado"] == "SL" else "gray"
+            plt.axvline(x=row["Date"], color=cor, linestyle="--", alpha=0.3)
 
-    plt.scatter(df["Date"], df["Capital Atual"], c=cores, edgecolors="black", s=70)
-    plt.plot(df["Date"], df["Capital Atual"], linestyle="--", color="blue", alpha=0.7)
+        plt.title("Evolução da Carteira Virtual")
+        plt.xlabel("Data")
+        plt.ylabel("Capital ($)")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig("evolucao_carteira_virtual.png")
+        print("✅ Gráfico de evolução da carteira gerado com sucesso.")
+    except Exception as e:
+        print(f"❌ Erro ao gerar gráfico de carteira virtual: {e}")
 
-    for idx, row in df.iterrows():
-        try:
-            plt.annotate(f"${row['Capital Atual']:.0f}", (row["Date"], row["Capital Atual"]),
-                         textcoords="offset points", xytext=(0, 6), ha='center', fontsize=8)
-        except Exception:
-            continue
-
-    plt.title("💰 Evolução da Carteira Virtual")
-    plt.xlabel("Data (BR)")
-    plt.ylabel("Capital ($)")
-    plt.xticks(rotation=45)
-    plt.grid(True)
-    plt.tight_layout()
-
-    path = "./evolucao_carteira_virtual.png"
-    plt.savefig(path)
-    plt.close()
-
-    print(f"✅ Gráfico da carteira salvo: {path}")
 
 
 
