@@ -2509,7 +2509,7 @@ def run_analysis(
         interval = tf["interval"]
         for asset in ASSETS:
             try:
-                df_candles = get_binance_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
+                df_candles = get_stock_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
                 df_candles = calculate_indicators(df_candles)
                 simular_todos_trades(prediction_log_path=log_path, df_candles=df_candles, timeframe=interval)
             except Exception as e:
@@ -4834,7 +4834,7 @@ def run_analysis(
                 period = tf['period']
 
                 lookback_map = {"15m": 30, "1h": 90, "1d": 1000, "1wk": 1500}
-                df = get_binance_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
+                df = get_stock_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
 
                 df = calculate_indicators(df)
                 data[interval] = df
