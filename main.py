@@ -171,12 +171,11 @@ BINANCE_BASE_URL = "https://api.binance.com/api/v3/klines"
 # ====================================================
 # 3. COLETA DE DADOS
 # ====================================================
-def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec=5):
+def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec=1.5):
     import time
     import pandas as pd
     import yfinance as yf
 
-    # Definir datas específicas para timeframes longos
     usar_datas = interval in ["1d", "1wk"]
     start_date = "2015-01-01"
     end_date = datetime.now().strftime("%Y-%m-%d")
@@ -200,6 +199,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             col_map = {col: std_col for col in data.columns for std_col in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if std_col.lower() in col.lower()}
             data = data.rename(columns=col_map)
             data = data[["Open", "High", "Low", "Close", "Volume"]]
+
             if not all(col in data.columns for col in ["Open", "High", "Low", "Close", "Volume"]):
                 raise ValueError(f"⚠️ Colunas necessárias ausentes em {asset} ({interval})")
 
@@ -210,6 +210,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             time.sleep(sleep_sec)
 
     raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
+
 
 def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
     """
