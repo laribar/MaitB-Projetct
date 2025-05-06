@@ -4839,7 +4839,7 @@ def run_analysis(
                 period = tf['period']
 
                 
-                df = get_stock_data(asset, interval=interval, period=period))
+                df = get_stock_data(asset, interval=interval, period=period)
 
                 df = calculate_indicators(df)
                 data[interval] = df
