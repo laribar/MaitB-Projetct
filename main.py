@@ -2034,8 +2034,15 @@ def plotar_grafico_carteira_virtual():
     try:
         df = safe_read_csv("prediction_log.csv")
 
-        if df.empty or not {"Date", "Capital Atual", "Resultado"}.issubset(df.columns):
-            print("⚠️ CSV insuficiente para gerar gráfico (faltam colunas ou dados).")
+        # Verifica se colunas obrigatórias estão presentes
+        colunas_obrigatorias = {"Date", "Capital Atual", "Resultado"}
+        if not colunas_obrigatorias.issubset(df.columns):
+            print(f"⚠️ CSV não possui as colunas obrigatórias: {colunas_obrigatorias}")
+            return
+
+        # Garante que as colunas não estão completamente vazias
+        if df[["Date", "Capital Atual", "Resultado"]].dropna().empty:
+            print("⚠️ Colunas estão vazias ou com valores ausentes, gráfico não gerado.")
             return
 
         df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
