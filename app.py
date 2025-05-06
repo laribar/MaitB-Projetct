@@ -59,7 +59,9 @@ def dashboard():
                 timeframes = df['Timeframe'].dropna().unique().tolist()
                 timeframe_selecionado = request.args.get('timeframe', timeframes[0] if timeframes else None)
                 if timeframe_selecionado:
-                    sinais = df[df['Timeframe'] == timeframe_selecionado].to_dict(orient='records')
+                    df_filtrado = df[(df['Timeframe'] == timeframe_selecionado) & (df['LSTM_PRED_CLOSE'].notna())]
+                    sinais = df_filtrado.to_dict(orient='records')
+
         except Exception as e:
             print(f"Erro ao carregar o prediction_log.csv: {e}")
 
