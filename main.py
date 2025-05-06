@@ -1018,6 +1018,18 @@ def generate_explanation(row, prediction, feature_importance=None):
     except Exception as e:
         return f"⚠️ Erro ao gerar explicação: {str(e)}"
 
+def mover_graficos_para_static():
+    os.makedirs("static/images", exist_ok=True)
+    for arquivo in os.listdir("."):
+        if arquivo.endswith(".png") and "grafico" in arquivo or "evolucao" in arquivo:
+            shutil.copy(arquivo, f"static/images/{arquivo}")
+            print(f"✅ Copiado: {arquivo} -> static/images/")
+
+# Chame esta função após gerar os gráficos
+mover_graficos_para_static()
+
+
+
 def enviar_grafico_previsao_futura(df_previsao, timeframe, asset):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
