@@ -165,6 +165,7 @@ ALERTA_VARIACAO_MINIMA = {
 
 ENVIAR_ALERTAS =True  # ✅ True = enviar alertas / False = não enviar alertas
 MODO_EXECUCAO_CONTINUA = True  # True = Roda 24/7, False = Só manualmente
+MODEL_DIR = 'models'
 
 # ====================================================
 # 3. COLETA DE DADOS
