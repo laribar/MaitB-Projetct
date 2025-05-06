@@ -4810,11 +4810,12 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
 # 6. EXECUÇÃO DAS ANÁLISES E ALERTAS
 # ====================================================
 def run_analysis(
-    selected_timeframes=None,
-    plot_timeframes=["15m", "1h"],
-    alert_timeframes=["15m", "1h", "1d", "1wk"],
+    selected_timeframes=[{"interval": "1h", "period": "90d"}],
+    plot_timeframes=["1h"],
+    alert_timeframes=["1h", "1d"],
     retrain_models=False
 ):
+
     criar_prediction_log_padrao()
     carregar_carteira_virtual()
 
