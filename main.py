@@ -166,7 +166,7 @@ ALERTA_VARIACAO_MINIMA = {
 ENVIAR_ALERTAS =True  # ✅ True = enviar alertas / False = não enviar alertas
 MODO_EXECUCAO_CONTINUA = True  # True = Roda 24/7, False = Só manualmente
 MODEL_DIR = 'models'
-
+BINANCE_BASE_URL = "https://api.binance.com/api/v3/klines"
 # ====================================================
 # 3. COLETA DE DADOS
 # ====================================================
@@ -210,7 +210,47 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
 
     raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
 
+def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
+    """
+    Coleta dados de candles do par fornecido (ex: BTCUSDT) da API da Binance.
 
+    asset: ex: 'BTC-USD'
+    interval: ex: '15m', '1h', '1d'
+    lookback_days: intervalo de tempo total a buscar
+    max_candles: limite de candles por chamada (máximo permitido: 1000)
+    """
+    symbol = asset.replace("-", "").upper()
+    binance_interval = interval  # mapeamento direto: '15m', '1h', '1d', '1w'
+    end_time = datetime.now(pytz.UTC)
+    start_time = end_time - timedelta(days=lookback_days)
+
+    params = {
+        "symbol": symbol,
+        "interval": binance_interval,
+        "startTime": int(start_time.timestamp() * 1000),
+        "endTime": int(end_time.timestamp() * 1000),
+        "limit": max_candles
+    }
+
+    response = requests.get(BINANCE_BASE_URL, params=params)
+    if response.status_code != 200:
+        raise ValueError(f"❌ Erro na requisição Binance ({symbol}): {response.status_code} - {response.text}")
+
+    data = response.json()
+    if not data:
+        raise ValueError(f"⚠️ Nenhum dado retornado para {symbol}")
+
+    df = pd.DataFrame(data, columns=[
+        "open_time", "Open", "High", "Low", "Close", "Volume",
+        "close_time", "QuoteAssetVolume", "NumberOfTrades",
+        "TakerBuyBaseVolume", "TakerBuyQuoteVolume", "Ignore"
+    ])
+
+    df["Date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+    df.set_index("Date", inplace=True)
+    df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+
+    return df
 
 def safe_read_csv(filepath):
   import os
@@ -2293,7 +2333,9 @@ def run_analysis(
                 interval = tf['interval']
                 period = tf['period']
 
-                df = get_stock_data(asset, interval, period)
+                lookback_map = {"15m": 30, "1h": 90, "1d": 1000, "1wk": 1500}
+                df = get_binance_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
+
                 df = calculate_indicators(df)
                 data[interval] = df
 
