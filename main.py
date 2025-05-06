@@ -2033,24 +2033,19 @@ def plotar_grafico_previsao_real(df, timeframe, asset):
 def plotar_grafico_carteira_virtual():
     try:
         df = safe_read_csv("prediction_log.csv")
-        if df.empty:
-            print("⚠️ Log está vazio. Nenhum gráfico será gerado.")
-            return
 
-        colunas_necessarias = {"Date", "Capital Atual", "Resultado"}
-        if not colunas_necessarias.issubset(df.columns):
-            print(f"⚠️ Colunas ausentes no CSV para gráfico: {colunas_necessarias - set(df.columns)}")
+        if df.empty or not {"Date", "Capital Atual", "Resultado"}.issubset(df.columns):
+            print("⚠️ CSV insuficiente para gerar gráfico (faltam colunas ou dados).")
             return
 
         df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
         df["Date"] = pd.to_datetime(df["Date"])
-
         df = df.sort_values("Date")
 
         plt.figure(figsize=(12, 6))
         plt.plot(df["Date"], df["Capital Atual"], label="Capital Atual", color="blue")
 
-        for i, row in df.iterrows():
+        for _, row in df.iterrows():
             cor = "green" if row["Resultado"] == "TP1" else "red" if row["Resultado"] == "SL" else "gray"
             plt.axvline(x=row["Date"], color=cor, linestyle="--", alpha=0.3)
 
@@ -2063,7 +2058,8 @@ def plotar_grafico_carteira_virtual():
         plt.savefig("evolucao_carteira_virtual.png")
         print("✅ Gráfico de evolução da carteira gerado com sucesso.")
     except Exception as e:
-        print(f"❌ Erro ao gerar gráfico de carteira virtual: {e}")
+        print(f"❌ Erro ao gerar gráfico da carteira: {e}")
+
 
 
 
