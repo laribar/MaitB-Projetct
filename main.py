@@ -4819,7 +4819,9 @@ def run_analysis(
                 interval = tf['interval']
                 period = tf['period']
 
-                df = get_stock_data(asset, interval, period)
+                lookback_map = {"15m": 30, "1h": 90, "1d": 1000, "1wk": 1500}
+                df = get_binance_data(asset, interval, lookback_days=lookback_map.get(interval, 30))
+
                 df = calculate_indicators(df)
                 data[interval] = df
 
