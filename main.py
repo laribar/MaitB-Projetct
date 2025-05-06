@@ -1068,7 +1068,7 @@ def enviar_grafico_previsao_futura(df_previsao, timeframe, asset):
     image_path = f"./projecao_futura_{asset.replace('-', '')}_{timeframe}.png"
     plt.savefig(image_path)
     print(f"💾 Gráfico salvo em: {image_path}")
-
+    mover_graficos_para_static()
     # 🔥 Novo: mostrar o gráfico no log
     plt.show()
     plt.close()
@@ -1446,6 +1446,7 @@ def plot_prediction_performance_por_timeframe(log_path="./prediction_log.csv"):
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(f"/tmp/erro_absoluto_{timeframe}.png")
+        mover_graficos_para_static()
         plt.close()
 
         # Dispersão do valor previsto x real
@@ -1461,6 +1462,7 @@ def plot_prediction_performance_por_timeframe(log_path="./prediction_log.csv"):
         plt.tight_layout()
         path_img = f"/tmp/previsao_vs_real_{timeframe}.png"
         plt.savefig(path_img)
+        mover_graficos_para_static()
         plt.close()
         print(f"✅ Gráfico salvo: {path_img}")
 
@@ -1526,6 +1528,7 @@ def enviar_grafico_lucro_por_confianca(log_path="./prediction_log.csv"):
 
     path = "/tmp/lucro_por_confianca.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     with open(path, "rb") as img:
@@ -1584,6 +1587,7 @@ def gerar_grafico_previsao_vs_real(log_path="./prediction_log.csv", output_path=
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path)
+    mover_graficos_para_static()
     plt.close()
     print(f"✅ Gráfico salvo em: {output_path}")
     return output_path
@@ -1642,6 +1646,7 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
 
     path = f"/tmp/previsao_vs_real_{asset.replace('-', '')}_{timeframe}.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     print(f"✅ Gráfico salvo: {path}")
@@ -2075,6 +2080,7 @@ def plotar_grafico_carteira_virtual():
         plt.grid(True)
         plt.tight_layout()
         plt.savefig("evolucao_carteira_virtual.png")
+        mover_graficos_para_static()
         print("✅ Gráfico de evolução da carteira gerado com sucesso.")
     except Exception as e:
         print(f"❌ Erro ao gerar gráfico da carteira: {e}")
@@ -2109,6 +2115,7 @@ def plotar_grafico_lucro(df):
 
     path = "lucro_por_faixa.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     # ✅ ADICIONE ISTO para mostrar o gráfico no log também
@@ -2283,6 +2290,7 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
 
     path = "/tmp/evolucao_carteira.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     print(f"✅ Gráfico da carteira salvo: {path}")
@@ -3574,6 +3582,7 @@ def enviar_grafico_previsao_futura(df_previsao, timeframe, asset):
     # 🔥 Novo: salvar o gráfico em ./
     image_path = f"./projecao_futura_{asset.replace('-', '')}_{timeframe}.png"
     plt.savefig(image_path)
+    mover_graficos_para_static()
     print(f"💾 Gráfico salvo em: {image_path}")
 
     # 🔥 Novo: mostrar o gráfico no log
@@ -3953,6 +3962,7 @@ def plot_prediction_performance_por_timeframe(log_path="./prediction_log.csv"):
         plt.grid(True)
         plt.tight_layout()
         plt.savefig(f"/tmp/erro_absoluto_{timeframe}.png")
+        mover_graficos_para_static()
         plt.close()
 
         # Dispersão do valor previsto x real
@@ -3968,6 +3978,7 @@ def plot_prediction_performance_por_timeframe(log_path="./prediction_log.csv"):
         plt.tight_layout()
         path_img = f"/tmp/previsao_vs_real_{timeframe}.png"
         plt.savefig(path_img)
+        mover_graficos_para_static()
         plt.close()
         print(f"✅ Gráfico salvo: {path_img}")
 
@@ -4033,6 +4044,7 @@ def enviar_grafico_lucro_por_confianca(log_path="./prediction_log.csv"):
 
     path = "/tmp/lucro_por_confianca.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     with open(path, "rb") as img:
@@ -4091,6 +4103,7 @@ def gerar_grafico_previsao_vs_real(log_path="./prediction_log.csv", output_path=
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path)
+    mover_graficos_para_static()
     plt.close()
     print(f"✅ Gráfico salvo em: {output_path}")
     return output_path
@@ -4131,6 +4144,7 @@ def enviar_grafico_previsao_real(df, timeframe, asset):
 
     path = f"/tmp/previsao_vs_real_{asset.replace('-', '')}_{timeframe}.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     # ✅ Exibe o gráfico no terminal
@@ -4570,6 +4584,7 @@ def plotar_grafico_carteira_virtual(log_path="./prediction_log.csv"):
     # 🔥 Novo: salvar o gráfico em ./
     path = "./evolucao_carteira_virtual.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     print(f"💾 Gráfico da carteira salvo em: {path}")
 
     # 🔥 Novo: mostrar no terminal
@@ -4603,6 +4618,7 @@ def plotar_grafico_lucro(df):
 
     path = "lucro_por_faixa.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     # ✅ ADICIONE ISTO para mostrar o gráfico no log também
@@ -4770,6 +4786,7 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
 
     path = "/tmp/evolucao_carteira.png"
     plt.savefig(path)
+    mover_graficos_para_static()
     plt.close()
 
     print(f"✅ Gráfico da carteira salvo: {path}")
