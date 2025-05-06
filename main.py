@@ -215,13 +215,18 @@ def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
     """
     Coleta dados de candles do par fornecido (ex: BTCUSDT) da API da Binance.
 
-    asset: ex: 'BTC-USD'
-    interval: ex: '15m', '1h', '1d'
+    asset: ex: 'BTCUSDT'
+    interval: ex: '15m', '1h', '1d', '1w'
     lookback_days: intervalo de tempo total a buscar
     max_candles: limite de candles por chamada (máximo permitido: 1000)
     """
-    symbol = asset.replace("-", "").upper()
-    binance_interval = interval  # mapeamento direto: '15m', '1h', '1d', '1w'
+    import requests
+    import pandas as pd
+    from datetime import datetime, timedelta
+    import pytz
+
+    symbol = asset.upper()
+    binance_interval = interval
     end_time = datetime.now(pytz.UTC)
     start_time = end_time - timedelta(days=lookback_days)
 
@@ -233,7 +238,12 @@ def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
         "limit": max_candles
     }
 
-    response = requests.get(BINANCE_BASE_URL, params=params)
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get("https://api.binance.com/api/v3/klines", params=params, headers=headers)
+
     if response.status_code != 200:
         raise ValueError(f"❌ Erro na requisição Binance ({symbol}): {response.status_code} - {response.text}")
 
@@ -252,6 +262,7 @@ def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
     df = df[["Open", "High", "Low", "Close", "Volume"]].astype(float)
 
     return df
+
 
 def safe_read_csv(filepath):
   import os
