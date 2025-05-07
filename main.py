@@ -2159,6 +2159,14 @@ def plotar_grafico_lucro(df):
 
 
 
+import os
+import pytz
+import pandas as pd
+from datetime import datetime, timedelta
+from utils.helpers import safe_read_csv, salvar_carteira_virtual, plotar_grafico_lucro, salvar_grafico_evolucao
+from simulacao import simular_trade_com_entradas_em_grade
+from config import carteira_virtual, BR_TZ
+
 def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=None, timeframe="15m"):
     print("📊 Rodando simulação de carteira virtual com sinais do log...")
 
@@ -2171,8 +2179,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True)
-    df_log["Date"] = df_log["Date"].dt.tz_convert(BR_TZ)
+    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -2181,9 +2188,8 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     # ✅ Corrigir o índice do df_candles para datetime com timezone
     df_candles.index = pd.to_datetime(df_candles.index)
     if df_candles.index.tz is None:
-        df_candles.index = df_candles.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
-    else:
-        df_candles.index = df_candles.index.tz_convert(BR_TZ)
+        df_candles.index = df_candles.index.tz_localize(pytz.UTC)
+    df_candles.index = df_candles.index.tz_convert(BR_TZ)
 
     intervalo_futuro = {
         "15m": timedelta(minutes=15 * 5),
@@ -2200,9 +2206,8 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         try:
             signal_time = pd.to_datetime(row["Date"])
             if signal_time.tzinfo is None:
-                signal_time = signal_time.tz_localize(pytz.UTC).tz_convert(BR_TZ)
-            else:
-                signal_time = signal_time.tz_convert(BR_TZ)
+                signal_time = signal_time.tz_localize(pytz.UTC)
+            signal_time = signal_time.tz_convert(BR_TZ)
 
             if (now - signal_time) < intervalo_futuro:
                 continue
@@ -2218,6 +2223,8 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
                 continue
 
             tipo = "compra" if int(row["Signal"]) == 1 else "venda"
+
+            # 🛠️ Comparação robusta entre timestamps com timezone
             df_future = df_candles[df_candles.index > signal_time]
             if df_future.empty:
                 continue
@@ -2261,7 +2268,6 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     print(f"📋 Log de previsões atualizado com resultados e capital: {prediction_log_path}")
     plotar_grafico_lucro(df_resultados)
     salvar_grafico_evolucao()
-
 
 
 
