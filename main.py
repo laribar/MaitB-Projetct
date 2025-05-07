@@ -49,6 +49,27 @@ os.makedirs("./models", exist_ok=True)
 # ====================================================
 # BLOCO 2 - SALVAR E CARREGAR MODELOS TREINADOS
 # ====================================================
+import sys
+import os
+
+# === Sistema de log para salvar prints ===
+class Logger:
+    def __init__(self, filename="log.txt"):
+        self.terminal = sys.stdout
+        # Cria ou anexa ao arquivo log.txt no diretório atual
+        self.log = open(filename, "a", encoding="utf-8")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+# Ativa o redirecionamento do stdout para o log
+sys.stdout = Logger("log.txt")
+
 def get_model_path(asset, interval, model_type="xgb"):
     asset_clean = asset.replace("-", "")
     ext = "joblib" if model_type == "xgb" else "h5"
