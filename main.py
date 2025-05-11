@@ -2139,17 +2139,19 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
+    # ✅ Corrige qualquer conversão de timestamp malformada
     df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
 
+    # ✅ Corrige o índice do df_candles
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
         return
 
-    df_candles = df_candles.copy()
     df_candles.index = pd.to_datetime(df_candles.index)
     if df_candles.index.tz is None:
-        df_candles.index = df_candles.index.tz_localize(pytz.UTC)
-    df_candles.index = df_candles.index.tz_convert(BR_TZ)
+        df_candles.index = df_candles.index.tz_localize("UTC").tz_convert(BR_TZ)
+    else:
+        df_candles.index = df_candles.index.tz_convert(BR_TZ)
 
     intervalo_futuro = {
         "15m": timedelta(minutes=75),
@@ -2163,59 +2165,15 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
     for _, row in df_log.iterrows():
         try:
-            signal_time = pd.to_datetime(row["Date"])
-            if isinstance(signal_time, np.ndarray):
+            signal_time = row["Date"]
+            if isinstance(signal_time, (np.ndarray, list)):
                 signal_time = signal_time[0]
+            signal_time = pd.to_datetime(signal_time)
             if signal_time.tzinfo is None:
-                signal_time = signal_time.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+                signal_time = signal_time.tz_localize("UTC").tz_convert(BR_TZ)
             else:
                 signal_time = signal_time.tz_convert(BR_TZ)
 
-            if (now - signal_time) < intervalo_futuro:
-                continue
-
-            if str(row["Signal"]) != "1":
-                continue
-
-            tp1 = float(row["TP1"]) if pd.notna(row["TP1"]) else None
-            sl = float(row["SL"]) if pd.notna(row["SL"]) else None
-            entry = float(row["Entry"]) if pd.notna(row["Entry"]) else None
-            if None in [tp1, sl, entry]:
-                continue
-
-            tipo = "compra"
-            df_future = df_candles[df_candles.index > signal_time]
-            if df_future.empty:
-                continue
-
-            resultado = simular_trade_com_entradas_em_grade(df_future, entry, tp1, sl, tipo, carteira_virtual["capital_atual"])
-            for key, value in resultado.items():
-                row[key] = value
-
-            carteira_virtual["capital_atual"] += row.get("lucro_real", 0.0)
-            carteira_virtual["historico_capital"].append(carteira_virtual["capital_atual"])
-            carteira_virtual["capital_maximo"] = max(carteira_virtual["capital_maximo"], carteira_virtual["capital_atual"])
-            row["Capital Atual"] = round(carteira_virtual["capital_atual"], 2)
-            row["LucroEstimado"] = round(row.get("lucro_real", 0.0), 2)
-            row["Resultado"] = resultado.get("resultado")
-            row["DuracaoMin"] = None
-            row["Acertou"] = 1 if resultado.get("resultado") == "TP1" else 0 if resultado.get("resultado") == "SL" else None
-
-            resultados.append(row)
-        except Exception as e:
-            print(f"❌ Erro inesperado na simulação: {e}")
-            continue
-
-    if not resultados:
-        print("📭 Nenhum trade foi simulado (ainda).")
-        return
-
-    df_resultados = pd.DataFrame(resultados)
-    df_resultados.to_csv(prediction_log_path, index=False)
-    salvar_carteira_virtual()
-    print(f"📋 Log atualizado: {prediction_log_path}")
-    plotar_grafico_lucro(df_resultados)
-    salvar_grafico_evolucao()
 
 
 
