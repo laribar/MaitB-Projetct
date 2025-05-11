@@ -1,99 +1,85 @@
+# diagnostico_sistema.py
 import os
 import pandas as pd
-import joblib
-from datetime import datetime, timedelta
-import pytz
-import glob
-import requests
+from datetime import datetime
+from pytz import timezone
 
-BR_TZ = pytz.timezone("America/Sao_Paulo")
+BR_TZ = timezone("America/Sao_Paulo")
+LOG_PATH = "./log.txt"
+CSV_PATH = "./prediction_log.csv"
+MODELS_DIR = "./models"
 
-def verificar_flask_ativo(url="http://127.0.0.1:5000/ping"):
-    print("\n🌐 Verificando status do servidor Flask...")
-
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            print(f"✅ Flask ativo e respondendo em {url}")
-        else:
-            print(f"⚠️ Flask respondeu com status {response.status_code} — pode não estar funcionando corretamente.")
-    except requests.ConnectionError:
-        print(f"❌ Flask não está acessível em {url} (conexão recusada).")
-    except Exception as e:
-        print(f"⚠️ Erro ao verificar o Flask: {e}")
-
-
+def print_header():
+    print("🧪 Diagnóstico do Sistema de Trading (LSTM + XGBoost)")
+    print("=" * 55)
 
 def check_log_file():
     print("📂 Verificando log.txt...")
-    if os.path.exists("log.txt") and os.path.getsize("log.txt") > 0:
+    if os.path.exists(LOG_PATH) and os.path.getsize(LOG_PATH) > 0:
         print("✅ log.txt encontrado e com conteúdo.")
     else:
-        print("⚠️ log.txt ausente ou vazio.")
+        print("❌ log.txt não encontrado ou vazio.")
 
 def check_models():
     print("\n📦 Verificando modelos salvos em ./models...")
-    modelos = glob.glob("models/*.h5") + glob.glob("models/*.joblib")
+    if not os.path.exists(MODELS_DIR):
+        print("❌ Pasta de modelos não encontrada.")
+        return
+    modelos = [f for f in os.listdir(MODELS_DIR) if f.endswith((".joblib", ".h5"))]
     if modelos:
         print(f"✅ Modelos encontrados: {len(modelos)}")
     else:
-        print("⚠️ Nenhum modelo salvo encontrado.")
+        print("⚠️ Nenhum modelo encontrado.")
 
 def check_prediction_log():
-    path = "prediction_log.csv"
     print("\n📄 Verificando prediction_log.csv...")
-    if not os.path.exists(path):
-        print("❌ Arquivo prediction_log.csv não encontrado.")
+    if not os.path.exists(CSV_PATH) or os.path.getsize(CSV_PATH) == 0:
+        print("❌ prediction_log.csv não encontrado ou está vazio.")
         return None
-    df = pd.read_csv(path)
-    if df.empty or "Date" not in df.columns:
-        print("❌ Arquivo está vazio ou mal formatado.")
+    try:
+        df = pd.read_csv(CSV_PATH)
+        print(f"✅ prediction_log.csv com {len(df)} linhas.")
+        return df
+    except Exception as e:
+        print(f"❌ Erro ao ler CSV: {e}")
         return None
-    print(f"✅ prediction_log.csv com {len(df)} linhas.")
-    return df
 
 def check_ultimos_sinais(df):
     print("\n📊 Últimos sinais registrados:")
-    df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_convert(BR_TZ)
-    ultimos = df.sort_values("Date", ascending=False).head(5)
-    for _, row in ultimos.iterrows():
-        dt = row["Date"].strftime("%d/%m %H:%M")
-        print(f"• {row['Asset']} | {row['Timeframe']} | {dt} | Sinal: {row['Signal']}")
+    try:
+        df["Date"] = pd.to_datetime(df["Date"])
+        df = df.sort_values("Date", ascending=False).head(5)
+        for _, row in df.iterrows():
+            data = row["Date"].strftime("%d/%m %H:%M")
+            asset = row.get("Asset", "N/A")
+            tf = row.get("Timeframe", "N/A")
+            signal = row.get("Signal", "N/A")
+            print(f"• {asset} | {tf} | {data} | Sinal: {signal}")
+    except Exception as e:
+        print(f"⚠️ Erro ao analisar últimos sinais: {e}")
 
 def check_capital(df):
-    if "Capital Atual" in df.columns:
-        capital_final = df["Capital Atual"].dropna().values[-1]
-        print(f"\n💰 Capital Atual (simulação): ${capital_final:,.2f}")
-    else:
-        print("⚠️ Coluna 'Capital Atual' ausente no log.")
+    print("\n💰 Verificando Capital da Carteira Virtual...")
+    if "Capital Atual" not in df.columns:
+        print("⚠️ Coluna 'Capital Atual' não existe no log.")
+        return
+    df["Capital Atual"] = pd.to_numeric(df["Capital Atual"], errors="coerce")
+    capital_vals = df["Capital Atual"].dropna()
+    if capital_vals.empty:
+        print("⚠️ Nenhum valor disponível na coluna 'Capital Atual'.")
+        return
+    capital_inicial = capital_vals.iloc[0]
+    capital_final = capital_vals.iloc[-1]
+    roi = ((capital_final / capital_inicial) - 1) * 100 if capital_inicial != 0 else 0
+    print(f"• Capital Inicial: ${capital_inicial:,.2f}")
+    print(f"• Capital Final  : ${capital_final:,.2f}")
+    print(f"• ROI Total      : {roi:+.2f}%")
 
-def check_graficos():
-    print("\n🖼️ Verificando gráficos salvos...")
-    graficos = glob.glob("*.png") + glob.glob("static/images/*.png")
-    if graficos:
-        print(f"✅ {len(graficos)} gráfico(s) encontrados.")
-    else:
-        print("⚠️ Nenhum gráfico encontrado.")
-
-def check_dados_candles():
-    from main import get_stock_data
-    print("\n📈 Verificando dados de candles...")
-    df = get_stock_data("BTC-USD", interval="1h", period="30d")
-    if df is not None and not df.empty and "Close" in df.columns:
-        print(f"✅ Candles BTC-USD (1h): {len(df)} registros.")
-    else:
-        print("❌ Erro ao obter dados de candles.")
-
-# 🚀 Executar todas as verificações
 if __name__ == "__main__":
-    print("🧪 Diagnóstico do Sistema de Trading (LSTM + XGBoost)\n" + "=" * 55)
+    print_header()
     check_log_file()
     check_models()
     df_log = check_prediction_log()
     if df_log is not None:
         check_ultimos_sinais(df_log)
         check_capital(df_log)
-    check_graficos()
-    check_dados_candles()
-    verificar_flask_ativo("http://127.0.0.1:5000/ping")
-  # ou seu IP/porta real
