@@ -4,8 +4,22 @@ import joblib
 from datetime import datetime, timedelta
 import pytz
 import glob
+import requests
 
 BR_TZ = pytz.timezone("America/Sao_Paulo")
+
+def verificar_flask_ativo(url="http://localhost:5000"):
+    print("\n🌐 Verificando status do servidor Flask...")
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            print(f"✅ Flask ativo e respondendo em {url}")
+        else:
+            print(f"⚠️ Flask respondeu com status {response.status_code} — pode não estar funcionando corretamente.")
+    except requests.ConnectionError:
+        print(f"❌ Flask não está acessível em {url} (conexão recusada).")
+    except Exception as e:
+        print(f"⚠️ Erro ao verificar o Flask: {e}")
 
 def check_log_file():
     print("📂 Verificando log.txt...")
@@ -67,7 +81,7 @@ def check_dados_candles():
     else:
         print("❌ Erro ao obter dados de candles.")
 
-# Executar todas as verificações
+# 🚀 Executar todas as verificações
 if __name__ == "__main__":
     print("🧪 Diagnóstico do Sistema de Trading (LSTM + XGBoost)\n" + "=" * 55)
     check_log_file()
@@ -78,3 +92,4 @@ if __name__ == "__main__":
         check_capital(df_log)
     check_graficos()
     check_dados_candles()
+    verificar_flask_ativo("http://18.117.91.17:5000")  # ou seu IP/porta real
