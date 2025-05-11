@@ -33,17 +33,18 @@
             </div>
         {% endif %}
 
-        <div class="card mb-4">
-            <div class="card-header">📅 Selecionar Timeframe</div>
+       <div class="card mb-4">
+            <div class="card-header">📅 Selecionar Timeframe e Ações</div>
             <div class="card-body">
-              <form method="get">
-                <div class="row g-2 align-items-center">
+                <div class="row g-3 align-items-center">
                     <div class="col-md-4">
-                        <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
-                            {% for tf in timeframes %}
-                                <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
-                            {% endfor %}
-                        </select>
+                        <form method="get">
+                            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                                {% for tf in timeframes %}
+                                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                     </div>
                     <div class="col-auto">
                         <form method="POST" action="{{ url_for('retrain') }}">
@@ -51,10 +52,9 @@
                         </form>
                     </div>
                 </div>
-            </form>
-
             </div>
         </div>
+
 
         <div class="card mb-4">
             <div class="card-header">📈 Últimos Sinais — <span class="highlight">{{ timeframe_selecionado }}</span></div>
