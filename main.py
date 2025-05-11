@@ -1775,75 +1775,87 @@ def exibir_status_carteira():
     print(f"• Drawdown Atual : {drawdown:.2f}%\n")
 
 def simular_trade(row, df_candles, timeframe):
-    print("🔍 Simulando trade:")
-    print(row)
-
     try:
-        signal_time = pd.to_datetime(row["Date"], errors="coerce", utc=True).tz_convert(BR_TZ)
+        print("🔍 Simulando trade:")
+        print(row)
+
+        signal_time = pd.to_datetime(row["Date"], utc=True).tz_convert(BR_TZ)
+        entry_price = row.get("Entry", row.get("Low", np.nan))
+        target_price = row.get("TP1", row.get("TargetPrice", np.nan))
+        stop_loss = row.get("SL", np.nan)
+
+        if any(pd.isna(v) for v in [entry_price, target_price, stop_loss]):
+            print("⚠️ Informações de trade incompletas (Entry, TP ou SL ausentes).")
+            return None
+
+        # 🔁 Define janela futura conforme o timeframe
+        future_window = {
+            "15m": timedelta(minutes=75),
+            "1h": timedelta(hours=5),
+            "1d": timedelta(days=5),
+            "1wk": timedelta(weeks=5)
+        }.get(timeframe, timedelta(hours=1))
+
+        # 🔒 Index e timezone
+        df_candles.index = pd.to_datetime(df_candles.index)
+        if df_candles.index.tz is None:
+            df_candles.index = df_candles.index.tz_localize("UTC").tz_convert(BR_TZ)
+        else:
+            df_candles.index = df_candles.index.tz_convert(BR_TZ)
+
+        # 🔎 Filtra candles futuros
+        start_time = signal_time
+        end_time = signal_time + future_window
+        df_future = df_candles[(df_candles.index >= start_time) & (df_candles.index <= end_time)]
+
+        if df_future.empty or "High" not in df_future.columns or "Low" not in df_future.columns:
+            print("⚠️ Nenhum dado futuro disponível para simulação.")
+            return None
+
+        # 🧠 Simulação do trade
+        resultado = "Sem alvo"
+        lucro = 0.0
+        preco_saida = None
+        duracao = None
+
+        for i, candle in df_future.iterrows():
+            high = candle["High"]
+            low = candle["Low"]
+
+            if high >= target_price:
+                resultado = "TP1"
+                preco_saida = target_price
+                lucro = target_price - entry_price
+                duracao = (i - signal_time).total_seconds() / 60
+                break
+            elif low <= stop_loss:
+                resultado = "SL"
+                preco_saida = stop_loss
+                lucro = stop_loss - entry_price
+                duracao = (i - signal_time).total_seconds() / 60
+                break
+
+        capital_inicial = row.get("Capital Atual", 10000)
+        capital_final = capital_inicial + lucro
+
+        return {
+            "Date": signal_time,
+            "Resultado": resultado,
+            "LucroEstimado": round(lucro, 2),
+            "PrecoSaida": round(preco_saida, 2) if preco_saida else None,
+            "DuracaoMin": round(duracao, 2) if duracao else None,
+            "Capital Atual": round(capital_final, 2),
+            "Tipo": row.get("Tipo", ""),
+            "Asset": row.get("Asset", ""),
+            "Interval": timeframe,
+            "EntryPrice": entry_price,
+            "TargetPrice": target_price,
+            "StopLoss": stop_loss,
+        }
+
     except Exception as e:
-        print(f"❌ Erro ao converter data do sinal: {e}")
+        print(f"❌ Erro ao simular trade: {e}")
         return None
-
-    if pd.isna(signal_time):
-        print("⚠️ Data do sinal é inválida (NaT).")
-        return None
-
-    entry_price = to_scalar(row.get("Entry", np.nan))
-    target_price = to_scalar(row.get("TP1", np.nan))
-    stop_loss = to_scalar(row.get("SL", np.nan))
-
-    if any(pd.isna(x) for x in [entry_price, target_price, stop_loss]):
-        print("⚠️ Dados incompletos para simulação (Entry/TP1/SL ausente).")
-        return None
-
-    future_window = {
-        "15m": timedelta(minutes=75),
-        "1h": timedelta(hours=5),
-        "1d": timedelta(days=5),
-        "1wk": timedelta(weeks=5)
-    }.get(timeframe, timedelta(hours=1))
-
-    start_time = signal_time
-    end_time = signal_time + future_window
-
-    df_future = df_candles[(df_candles.index >= start_time) & (df_candles.index <= end_time)]
-
-    if df_future.empty or "High" not in df_future.columns or "Low" not in df_future.columns:
-        print("⚠️ Nenhum dado futuro disponível para simulação.")
-        return None
-
-    resultado = "Sem alvo"
-    lucro = 0.0
-    preco_saida = None
-    duracao_min = None
-
-    for i, candle in df_future.iterrows():
-        high = candle["High"]
-        low = candle["Low"]
-
-        if high >= target_price:
-            resultado = "TP1"
-            preco_saida = target_price
-            lucro = target_price - entry_price
-            duracao_min = (i - signal_time).total_seconds() / 60
-            break
-        elif low <= stop_loss:
-            resultado = "SL"
-            preco_saida = stop_loss
-            lucro = stop_loss - entry_price
-            duracao_min = (i - signal_time).total_seconds() / 60
-            break
-
-    capital_anterior = row.get("Capital Atual", 10000)
-    capital_novo = capital_anterior + lucro if pd.notna(lucro) else capital_anterior
-
-    return {
-        "Resultado": resultado,
-        "LucroEstimado": round(lucro, 2),
-        "PrecoSaida": round(preco_saida, 2) if preco_saida else None,
-        "DuracaoMin": round(duracao_min, 2) if duracao_min else None,
-        "Capital Atual": round(capital_novo, 2)
-    }
 
 
 def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=None, timeframe="15m"):
