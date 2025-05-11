@@ -4588,7 +4588,8 @@ def run_analysis(
                     tp2 = entry_price + 2 * abs(entry_price - sl)
                     rr_ratio = round((tp1 - entry_price) / (entry_price - sl), 2) if entry_price != sl else None
 
-                    model_xgb = models.get(interval)
+                    #model_xgb = models.get(interval)
+                    model_xgb = None
                     xgb_signal = 1
                     if model_xgb:
                         df_input = data[interval].iloc[[-1]].copy()
