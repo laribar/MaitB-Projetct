@@ -5,7 +5,14 @@ import shutil
 
 from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste o nome se o seu script principal for diferente
 
+# app.py
+from flask import Flask
 app = Flask(__name__)
+
+@app.route("/ping")
+def ping():
+    return "pong", 200
+
 app.secret_key = 'sua_chave_secreta'  # troque por algo seguro em produção
 
 # === Rota de login ===
