@@ -1803,6 +1803,11 @@ def simular_trade(row, df_candles, timeframe):
     print(df_future.head(3))
 
     if df_future.empty or "High" not in df_future or "Low" not in df_future:
+        print("🕒 Index de df_candles (amostra):")
+        print(df_candles.index[:5])
+        print("📆 signal_time tzinfo:", signal_time.tzinfo)
+        print("📆 df_candles index tz:", df_candles.index.tz)
+
         return None
     print("df_candles.index.min():", df_candles.index.min())
     print("df_candles.index.max():", df_candles.index.max())
