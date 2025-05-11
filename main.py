@@ -1891,6 +1891,9 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
             if signal_time + intervalo_futuro > now:
                 continue
+            
+            print(f"📆 Verificando range de df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
+            print(f"📌 Sinal: {signal_time} ➔ {signal_time + intervalo_futuro}")
 
             resultado = simular_trade(row, df_candles, timeframe)
             if resultado:
