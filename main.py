@@ -4409,13 +4409,13 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
 # ====================================================
 # 6. EXECUÇÃO DAS ANÁLISES E ALERTAS
 # ====================================================
+
 def run_analysis(
     selected_timeframes=[{"interval": "1h", "period": "90d"}],
     plot_timeframes=["1h"],
     alert_timeframes=["1h", "1d"],
     retrain_models=False
 ):
-
     criar_prediction_log_padrao()
     carregar_carteira_virtual()
 
@@ -4439,9 +4439,7 @@ def run_analysis(
                 interval = tf['interval']
                 period = tf['period']
 
-                
                 df = get_stock_data(asset, interval=interval, period=period)
-
                 df = calculate_indicators(df)
                 data[interval] = df
 
@@ -4607,6 +4605,7 @@ def run_analysis(
                 simular_todos_trades(prediction_log_path=log_path, df_candles=df_candles, timeframe=interval)
             except Exception as e:
                 print(f"⚠️ Erro ao simular para {asset} ({interval}): {e}")
+
 
 
 
