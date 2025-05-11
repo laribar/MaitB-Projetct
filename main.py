@@ -165,7 +165,8 @@ def load_lstm_model(asset, interval, window_size=20):
 # ====================================================
 # 2. CONFIGURAÇÕES
 # ====================================================
-ASSETS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+ASSETS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "AVAX-USD"]
+
 
 
 
