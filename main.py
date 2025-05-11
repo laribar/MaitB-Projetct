@@ -1065,26 +1065,20 @@ def generate_explanation(row, prediction, feature_importance=None):
         return f"⚠️ Erro ao gerar explicação: {str(e)}"
 
 def mover_graficos_para_static():
-    import os
-    import shutil
-
+    import os, shutil
     os.makedirs("static/images", exist_ok=True)
-
-    padroes = ["grafico", "evolucao", "projecao", "previsao_vs_real", "lucro_por_faixa"]
+    padroes = ["candle_proj", "previsao_vs_real", "evolucao_carteira"]
     arquivos = [f for f in os.listdir(".") if f.endswith(".png") and any(p in f for p in padroes)]
-
     if not arquivos:
         print("⚠️ Nenhum gráfico encontrado para mover.")
         return
-
     for arquivo in arquivos:
         destino = os.path.join("static/images", arquivo)
         try:
             shutil.copy(arquivo, destino)
-            print(f"✅ Gráfico movido para dashboard: {arquivo}")
+            print(f"📁 {arquivo} copiado para {destino}")
         except Exception as e:
-            print(f"❌ Erro ao mover {arquivo} ➜ {destino}: {e}")
-
+            print(f"❌ Erro ao mover {arquivo}: {e}")
 
 
 
@@ -1161,43 +1155,31 @@ import pandas as pd
 from datetime import timedelta
 import matplotlib.pyplot as plt
 
-def plotar_candles_com_previsao(
-    df_candles,
-    pred_lstm_dicts,
-    title="📊 Histórico + Previsão LSTM",
-    asset="BTC-USD",
-    timeframe="15m"
-):
-    """
-    Plota 10 candles reais + previsões futuras com mplfinance (candlestick),
-    salva o gráfico no ./ e também exibe no terminal.
-    """
+def plotar_candles_com_previsao(df_candles, pred_lstm_dicts, asset="BTC-USD", timeframe="1h"):
+    import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
+    from datetime import timedelta
 
-    # 🛠️ Garantir que 'Date' é datetime
-    df_candles = df_candles.copy()
-    if "Date" not in df_candles.columns:
-        df_candles["Date"] = df_candles.index
-    df_candles["Date"] = pd.to_datetime(df_candles["Date"])
+    if df_candles.empty or not pred_lstm_dicts:
+        print("⚠️ Dados insuficientes para plotar previsão futura.")
+        return
 
-    df_plot = df_candles.tail(10).reset_index(drop=True)[["Date", "Open", "High", "Low", "Close"]].copy()
-    df_plot["Volume"] = 0  # placeholder para evitar erro do mplfinance
+    df_plot = df_candles.copy().tail(10).reset_index()
+    df_plot = df_plot[["Date", "Open", "High", "Low", "Close"]]
+    df_plot["Volume"] = 0  # placeholder para mplfinance
 
     last_date = df_plot["Date"].iloc[-1]
 
-    timeframe_delta = {
+    delta_map = {
         "15m": timedelta(minutes=15),
         "1h": timedelta(hours=1),
         "1d": timedelta(days=1),
         "1wk": timedelta(weeks=1)
-    }.get(timeframe, timedelta(hours=1))
+    }
+    delta = delta_map.get(timeframe, timedelta(hours=1))
 
-    # 🔮 Adiciona os candles futuros previstos
     for i, pred in enumerate(pred_lstm_dicts):
-        if any(pred.get(k) is None for k in ["High", "Low", "Close"]):
-            continue
-
-        future_time = last_date + timeframe_delta * (i + 1)
-
+        future_time = last_date + delta * (i + 1)
         candle = {
             "Date": future_time,
             "Open": df_plot["Close"].iloc[-1] if i == 0 else pred_lstm_dicts[i - 1]["Close"],
@@ -1206,31 +1188,19 @@ def plotar_candles_com_previsao(
             "Close": pred["Close"],
             "Volume": 0
         }
-
         df_plot = pd.concat([df_plot, pd.DataFrame([candle])], ignore_index=True)
 
+    df_plot["Date"] = pd.to_datetime(df_plot["Date"])
     df_plot.set_index("Date", inplace=True)
-    df_plot.index = pd.to_datetime(df_plot.index)
 
-    # 🎨 Estilo visual do gráfico
+    import mplfinance as mpf
     mc = mpf.make_marketcolors(up='g', down='r', inherit=True)
     s = mpf.make_mpf_style(marketcolors=mc, gridstyle=':', facecolor='white')
+    path = f"./candle_proj_{asset.replace('-', '')}_{timeframe}.png"
 
-    # 📁 Caminho para salvar no ./
-    save_path = f"./candle_proj_{asset.replace('-', '')}_{timeframe}.png"
+    mpf.plot(df_plot, type='candle', style=s, title=f"🔮 Projeção LSTM — {asset} ({timeframe})", ylabel='Preço', volume=False, savefig=path)
+    print(f"✅ Gráfico de projeção futura salvo: {path}")
 
-    # 📈 Salvar e também exibir
-    mpf.plot(df_plot, type='candle', style=s,
-             title=f"{title} — {asset} ({timeframe})",
-             ylabel='Preço', volume=False, savefig=save_path)
-
-    print(f"💾 Gráfico de previsão salvo em: {save_path}")
-
-    # Agora exibe o gráfico no terminal
-    mpf.plot(df_plot, type='candle', style=s,
-             title=f"{title} — {asset} ({timeframe})",
-             ylabel='Preço', volume=False)
-    plt.show()
 
 
 
@@ -2330,6 +2300,9 @@ def run_analysis(
                         continue
 
                     pred_lstm = predict_with_lstm(lstm_model, data[interval], asset=asset, interval=interval)
+                    # Gera gráfico de previsão LSTM (candlestick futuro)
+                    plotar_candles_com_previsao(data[interval], [pred_lstm], asset=asset, timeframe=interval)
+
                     if pred_lstm is None or any(pred_lstm.get(k) is None for k in ["High", "Low", "Close"]):
                         continue
 
@@ -2491,6 +2464,9 @@ def run_analysis(
                 simular_todos_trades(prediction_log_path=log_path, df_candles=df_candles, timeframe=interval)
             except Exception as e:
                 print(f"⚠️ Erro ao simular para {asset} ({interval}): {e}")
+
+# Move gráficos para o dashboard
+mover_graficos_para_static()
 
 
 
@@ -3622,78 +3598,6 @@ import mplfinance as mpf
 import pandas as pd
 from datetime import timedelta
 import matplotlib.pyplot as plt
-
-def plotar_candles_com_previsao(
-    df_candles,
-    pred_lstm_dicts,
-    title="📊 Histórico + Previsão LSTM",
-    asset="BTC-USD",
-    timeframe="15m"
-):
-    """
-    Plota 10 candles reais + previsões futuras com mplfinance (candlestick),
-    salva o gráfico no ./ e também exibe no terminal.
-    """
-
-    # 🛠️ Garantir que 'Date' é datetime
-    df_candles = df_candles.copy()
-    if "Date" not in df_candles.columns:
-        df_candles["Date"] = df_candles.index
-    df_candles["Date"] = pd.to_datetime(df_candles["Date"])
-
-    df_plot = df_candles.tail(10).reset_index(drop=True)[["Date", "Open", "High", "Low", "Close"]].copy()
-    df_plot["Volume"] = 0  # placeholder para evitar erro do mplfinance
-
-    last_date = df_plot["Date"].iloc[-1]
-
-    timeframe_delta = {
-        "15m": timedelta(minutes=15),
-        "1h": timedelta(hours=1),
-        "1d": timedelta(days=1),
-        "1wk": timedelta(weeks=1)
-    }.get(timeframe, timedelta(hours=1))
-
-    # 🔮 Adiciona os candles futuros previstos
-    for i, pred in enumerate(pred_lstm_dicts):
-        if any(pred.get(k) is None for k in ["High", "Low", "Close"]):
-            continue
-
-        future_time = last_date + timeframe_delta * (i + 1)
-
-        candle = {
-            "Date": future_time,
-            "Open": df_plot["Close"].iloc[-1] if i == 0 else pred_lstm_dicts[i - 1]["Close"],
-            "High": pred["High"],
-            "Low": pred["Low"],
-            "Close": pred["Close"],
-            "Volume": 0
-        }
-
-        df_plot = pd.concat([df_plot, pd.DataFrame([candle])], ignore_index=True)
-
-    df_plot.set_index("Date", inplace=True)
-    df_plot.index = pd.to_datetime(df_plot.index)
-
-    # 🎨 Estilo visual do gráfico
-    mc = mpf.make_marketcolors(up='g', down='r', inherit=True)
-    s = mpf.make_mpf_style(marketcolors=mc, gridstyle=':', facecolor='white')
-
-    # 📁 Caminho para salvar no ./
-    save_path = f"./candle_proj_{asset.replace('-', '')}_{timeframe}.png"
-
-    # 📈 Salvar e também exibir
-    mpf.plot(df_plot, type='candle', style=s,
-             title=f"{title} — {asset} ({timeframe})",
-             ylabel='Preço', volume=False, savefig=save_path)
-
-    print(f"💾 Gráfico de previsão salvo em: {save_path}")
-
-    # Agora exibe o gráfico no terminal
-    mpf.plot(df_plot, type='candle', style=s,
-             title=f"{title} — {asset} ({timeframe})",
-             ylabel='Preço', volume=False)
-    plt.show()
-
 
 
 
