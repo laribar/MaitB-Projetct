@@ -26,6 +26,11 @@ def executar_ordem_market(symbol="BTCUSDT", side="Buy", valor_usdt=10):
         "category": "spot",
         "symbol": symbol
     })
+    
+    print("🔍 RESPOSTA DA API (raw):")
+    print(preco_resp.status_code)
+    print(preco_resp.text)
+
     preco_data = preco_resp.json()
     preco_atual = float(preco_data["result"]["list"][0]["lastPrice"])
     quantidade = round(valor_usdt / preco_atual, 6)
