@@ -1,4 +1,5 @@
 from main import get_stock_data
+import pandas as pd
 import pytz
 from datetime import datetime, timedelta
 
