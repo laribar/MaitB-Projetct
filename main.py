@@ -2443,7 +2443,7 @@ def run_analysis(
         interval = tf["interval"]
         for asset in ASSETS:
             try:
-                df_candles = get_stock_data(asset, interval=interval, period=period)
+                df_candles = get_stock_data(asset, interval=interval, period=tf["period"])
                 df_candles = calculate_indicators(df_candles)
                 simular_todos_trades(prediction_log_path=log_path, df_candles=df_candles, timeframe=interval)
             except Exception as e:
