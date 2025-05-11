@@ -2671,8 +2671,8 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
     import time
     import pandas as pd
     import yfinance as yf
+    from datetime import datetime
 
-    # Definir datas específicas para timeframes longos
     usar_datas = interval in ["1d", "1wk"]
     start_date = "2015-01-01"
     end_date = datetime.now().strftime("%Y-%m-%d")
@@ -2686,8 +2686,9 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
                 print(f"⏳ Usando period para {asset} ({interval}): {period}")
                 data = yf.download(asset, period=period, interval=interval, progress=False, auto_adjust=False)
 
-            if data.empty:
-                raise ValueError(f"⚠️ Dados vazios recebidos de {asset} ({interval})")
+            # ✅ Validação crítica do índice
+            if data.empty or len(data.index) == 0 or data.index.min().year < 2000:
+                raise ValueError(f"⚠️ Dados inválidos recebidos de {asset} ({interval}) — índice corrompido.")
 
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = data.columns.get_level_values(0)
