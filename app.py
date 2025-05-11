@@ -67,7 +67,12 @@ def dashboard():
                         if col not in df_filtrado.columns:
                             df_filtrado[col] = None
 
+                    # Agrupa por ativo, pega o mais recente
+                    df_filtrado = df_filtrado.sort_values(by='Date', ascending=False)
+                    df_filtrado = df_filtrado.drop_duplicates(subset='Asset', keep='first')
+                    
                     sinais = df_filtrado.to_dict(orient='records')
+
         except Exception as e:
             print(f"Erro ao carregar o prediction_log.csv: {e}")
 
