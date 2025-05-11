@@ -6,7 +6,6 @@ import shutil
 from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste o nome se o seu script principal for diferente
 
 # app.py
-from flask import Flask
 app = Flask(__name__)
 
 @app.route("/ping")
