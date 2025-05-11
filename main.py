@@ -192,7 +192,7 @@ BINANCE_BASE_URL = "https://api.binance.com/api/v3/klines"
 # ====================================================
 # 3. COLETA DE DADOS
 # ====================================================
-def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec=1.5):
+def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec=5):
     import time
     import pandas as pd
     import yfinance as yf
@@ -210,27 +210,23 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
                 print(f"⏳ Usando period para {asset} ({interval}): {period}")
                 data = yf.download(asset, period=period, interval=interval, progress=False, auto_adjust=False)
 
-            if data.empty:
-                raise ValueError(f"⚠️ Dados vazios recebidos de {asset} ({interval})")
+            # 🛠️ Correção do índice se vier corrompido
+            data = data[~data.index.duplicated(keep="first")]
+            data.index = pd.to_datetime(data.index, errors="coerce")
+            data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
 
-            if isinstance(data.columns, pd.MultiIndex):
-                data.columns = data.columns.get_level_values(0)
-            data.columns = [col.split()[-1] if " " in col else col for col in data.columns]
-            data = data.loc[:, ~data.columns.duplicated()]
-            col_map = {col: std_col for col in data.columns for std_col in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if std_col.lower() in col.lower()}
-            data = data.rename(columns=col_map)
+            if data.empty or data.index.min().year < 2000:
+                raise ValueError(f"⚠️ Índice inválido ou dados vazios de {asset} ({interval})")
+
             data = data[["Open", "High", "Low", "Close", "Volume"]]
-
-            if not all(col in data.columns for col in ["Open", "High", "Low", "Close", "Volume"]):
-                raise ValueError(f"⚠️ Colunas necessárias ausentes em {asset} ({interval})")
-
             return data
 
         except Exception as e:
-            print(f"❌ Falha na tentativa {attempt+1} para {asset} ({interval}): {e}")
+            print(f"❌ Tentativa {attempt+1} falhou: {e}")
             time.sleep(sleep_sec)
 
-    raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
+    raise RuntimeError(f"❌ Falha ao obter dados de {asset} ({interval}) após {max_retries} tentativas.")
+
 
 
 def get_binance_data(asset, interval="15m", lookback_days=30, max_candles=1000):
