@@ -3,8 +3,8 @@ from bybit_client import session
 
 def executar_ordem_spot_bybit(symbol="BTCUSDT", valor_usdt=10):
     try:
-        # Consulta preço atual para calcular a quantidade
-        book = session.get_ticker(category="spot", symbol=symbol)
+        # ✅ Corrigido: busca preço atual
+        book = session.get_market_tickers(category="spot", symbol=symbol)
         preco = float(book["result"]["list"][0]["lastPrice"])
         quantidade = round(valor_usdt / preco, 6)
 
