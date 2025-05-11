@@ -1870,6 +1870,8 @@ def simular_trade(row, df_candles, timeframe):
         return None
 
 
+from datetime import datetime, timedelta
+
 def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=None, timeframe="15m"):
     print("📊 Rodando simulação de carteira virtual com sinais do log...")
 
@@ -1882,8 +1884,9 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    # ✅ Garante que a coluna Date esteja como datetime com timezone BR
-    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
+    # 🧠 Correção robusta do parsing da coluna Date
+    df_log["Date"] = pd.to_datetime(df_log["Date"], errors="coerce", utc=True)
+    df_log["Date"] = df_log["Date"].dt.tz_convert(BR_TZ)
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -1908,21 +1911,22 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     for _, row in df_log.iterrows():
         try:
             signal_time = row["Date"]
+            if pd.isna(signal_time):
+                print("⚠️ Data inválida no log: NaT")
+                continue
 
             if signal_time + intervalo_futuro > now:
                 continue
 
+            print(f"📆 Verificando range de df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
             print(f"📌 Sinal: {signal_time} ➔ {signal_time + intervalo_futuro}")
-            print(f"📆 Range df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
 
             resultado = simular_trade(row, df_candles, timeframe)
             if resultado:
                 resultados.append(resultado)
-            else:
-                print("⚠️ Resultado da simulação foi None.")
 
         except Exception as e:
-            print(f"❌ Erro ao processar trade em {row.get('Date', 'desconhecido')}: {e}")
+            print(f"Erro ao processar trade em {row.get('Date', 'desconhecido')}: {e}")
 
     if not resultados:
         print("⚠️ Nenhum trade foi simulado com sucesso.")
@@ -1930,15 +1934,19 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
     df_resultados = pd.DataFrame(resultados)
 
-    # ✅ Atualiza os campos no CSV original
-    for campo in ["Resultado", "LucroEstimado", "Capital Atual", "PrecoSaida", "DuracaoMin"]:
-        if campo in df_resultados.columns:
-            df_log[campo] = df_resultados[campo]
-
-    df_log.to_csv(prediction_log_path, index=False)
-    print(f"✅ Simulação concluída. Resultados atualizados em {prediction_log_path}")
+    # 🔄 Atualiza o arquivo original com as colunas preenchidas
+    try:
+        df_merged = df_log.merge(df_resultados, on=["Asset", "Timeframe", "Date"], how="left", suffixes=("", "_sim"))
+        for col in ["Resultado", "Lucro", "Capital Atual", "Duracao"]:
+            if col + "_sim" in df_merged.columns:
+                df_merged[col] = df_merged[col].combine_first(df_merged[col + "_sim"])
+        df_merged.to_csv(prediction_log_path, index=False)
+        print(f"✅ Simulação concluída. Resultados atualizados em {prediction_log_path}")
+    except Exception as e:
+        print(f"❌ Erro ao atualizar o arquivo de log: {e}")
 
     salvar_grafico_evolucao(prediction_log_path)
+
 
 
 def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo='compra', capital=10000, max_entradas=3):
