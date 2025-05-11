@@ -35,8 +35,8 @@ def dashboard():
 
     caminho_csv = 'prediction_log.csv'
     caminho_imagem_destino = 'static/images/evolucao_carteira_virtual.png'
-    caminho_imagem_origem = 'evolucao_carteira_virtual.png'
 
+    # 🔁 Gera gráfico da carteira se ainda não existir
     if not os.path.exists(caminho_imagem_destino):
         try:
             if os.path.exists(caminho_csv):
@@ -58,23 +58,21 @@ def dashboard():
             if 'Timeframe' in df.columns:
                 timeframes = df['Timeframe'].dropna().unique().tolist()
                 timeframe_selecionado = request.args.get('timeframe', timeframes[0] if timeframes else None)
+
                 if timeframe_selecionado:
                     df_filtrado = df[df['Timeframe'] == timeframe_selecionado]
 
-                    # Garante que colunas existam mesmo que não estejam no CSV
-                    colunas_necessarias = ['Asset', 'Price', 'TargetPrice', 'AdjustedProb', 'Date', 'Capital Atual']
+                    colunas_necessarias = ['Asset', 'Price', 'TargetPrice', 'AdjustedProb', 'Date', 'Capital Atual', 'Signal', 'Reason']
                     for col in colunas_necessarias:
                         if col not in df_filtrado.columns:
                             df_filtrado[col] = None
 
-                    # Agrupa por ativo, pega o mais recente
                     df_filtrado = df_filtrado.sort_values(by='Date', ascending=False)
                     df_filtrado = df_filtrado.drop_duplicates(subset='Asset', keep='first')
-                    
                     sinais = df_filtrado.to_dict(orient='records')
 
         except Exception as e:
-            print(f"Erro ao carregar o prediction_log.csv: {e}")
+            print(f"⚠️ Erro ao carregar prediction_log.csv: {e}")
 
     mensagem = request.args.get('mensagem')
 
