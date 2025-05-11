@@ -2846,7 +2846,7 @@ def criar_prediction_log_padrao(filepath="./prediction_log.csv", backup_dir="./p
   # 4. INDICADORES TÉCNICOS
   # ====================================================
 def calculate_indicators(data):
-    data = data.copy().reset_index(drop=True)
+    data = data.copy()  # ✅ Mantém o índice original com timezone
     for col in ["Open", "High", "Low", "Close", "Volume"]:
         data[col] = data[col].astype(float)
 
@@ -2882,7 +2882,7 @@ def calculate_indicators(data):
         data["Kijun_Sen"] = ichimoku.ichimoku_base_line()
 
     except Exception as e:
-        print(f"⚠️ Erro ao calcular indicadores: {e}")
+        print(f"⚠️ Erro ao calcular indicadores técnicos: {e}")
 
     # VWAP
     try:
@@ -2892,14 +2892,16 @@ def calculate_indicators(data):
     except Exception as e:
         print(f"⚠️ Erro ao calcular VWAP: {e}")
 
-    # Candlestick patterns
+    # Padrões de candle
     try:
         data["Doji"] = ((abs(data["Close"] - data["Open"]) / (data["High"] - data["Low"] + 1e-9)) < 0.1).astype(int)
-        data["Engulfing"] = ((data["Open"].shift(1) > data["Close"].shift(1)) & (data["Open"] < data["Close"]) &
-                            (data["Close"] > data["Open"].shift(1)) & (data["Open"] < data["Close"].shift(1))).astype(int)
+        data["Engulfing"] = ((data["Open"].shift(1) > data["Close"].shift(1)) &
+                             (data["Open"] < data["Close"]) &
+                             (data["Close"] > data["Open"].shift(1)) &
+                             (data["Open"] < data["Close"].shift(1))).astype(int)
         data["Hammer"] = (((data["High"] - data["Low"]) > 3 * abs(data["Open"] - data["Close"])) &
-                        ((data["Close"] - data["Low"]) / (data["High"] - data["Low"] + 1e-9) > 0.6) &
-                        ((data["Open"] - data["Low"]) / (data["High"] - data["Low"] + 1e-9) > 0.6)).astype(int)
+                          ((data["Close"] - data["Low"]) / (data["High"] - data["Low"] + 1e-9) > 0.6) &
+                          ((data["Open"] - data["Low"]) / (data["High"] - data["Low"] + 1e-9) > 0.6)).astype(int)
     except Exception as e:
         print(f"⚠️ Erro ao calcular padrões de candle: {e}")
         # Garante que existam
@@ -2907,8 +2909,11 @@ def calculate_indicators(data):
         data["Engulfing"] = 0
         data["Hammer"] = 0
 
+    # 🔒 Remove linhas inválidas
     data.dropna(inplace=True)
+
     return data
+
 
 
 
