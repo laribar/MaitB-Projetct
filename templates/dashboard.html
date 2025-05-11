@@ -58,7 +58,7 @@
         <div class="card-header">📈 Últimos Sinais — <span class="highlight">{{ timeframe_selecionado }}</span></div>
         <div class="card-body">
             {% if sinais %}
-                <div class="table-responsive">
+                <div class="table-responsive mb-4">
                     <table class="table table-hover align-middle text-center">
                         <thead class="table-dark">
                             <tr>
@@ -128,6 +128,30 @@
                         </tbody>
                     </table>
                 </div>
+
+                <div class="row">
+                    {% for sinal in sinais %}
+                        {% set ativo = sinal['Asset'].replace('-', '') %}
+                        {% set img_path = 'static/images/candle_proj_' + ativo + '_' + timeframe_selecionado + '.png' %}
+                        <div class="col-md-6 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-primary text-white">
+                                    🔮 Previsão LSTM — {{ sinal['Asset'] }} ({{ timeframe_selecionado }})
+                                </div>
+                                <div class="card-body text-center">
+                                    {% if img_path and img_path|length > 0 %}
+                                        <img src="{{ url_for('static', filename='images/candle_proj_' + ativo + '_' + timeframe_selecionado + '.png') }}"
+                                             alt="Gráfico {{ ativo }} {{ timeframe_selecionado }}"
+                                             class="img-fluid rounded" style="max-height: 360px;">
+                                    {% else %}
+                                        <p class="text-muted">Gráfico não disponível.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
             {% else %}
                 <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
             {% endif %}
