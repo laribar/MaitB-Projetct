@@ -94,4 +94,5 @@ if __name__ == "__main__":
         check_capital(df_log)
     check_graficos()
     check_dados_candles()
-    verificar_flask_ativo("http://18.117.91.17:5000/")  # ou seu IP/porta real
+    verificar_flask_ativo("http://127.0.0.1:5000/ping")
+  # ou seu IP/porta real
