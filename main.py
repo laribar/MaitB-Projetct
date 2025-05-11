@@ -1857,7 +1857,8 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    df_log["Date"] = pd.to_datetime(df_log["Date"])
+    # ✅ Parsing robusto da data com milissegundos
+    df_log["Date"] = pd.to_datetime(df_log["Date"], errors="coerce")
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -1881,7 +1882,11 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
     for _, row in df_log.iterrows():
         try:
-            signal_time = pd.to_datetime(row["Date"])
+            signal_time = pd.to_datetime(row["Date"], errors="coerce")
+
+            if pd.isna(signal_time):
+                print(f"⚠️ Data inválida no log: {row.get('Date')}")
+                continue
 
             # ✅ Corrige timezone do sinal manual
             if signal_time.tzinfo is None:
@@ -1891,7 +1896,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
             if signal_time + intervalo_futuro > now:
                 continue
-            
+
             print(f"📆 Verificando range de df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
             print(f"📌 Sinal: {signal_time} ➔ {signal_time + intervalo_futuro}")
 
@@ -1911,9 +1916,6 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     print(f"✅ Simulação concluída. Resultados salvos em {prediction_log_path}")
 
     salvar_grafico_evolucao(prediction_log_path)
-
-
-
 
 
 
