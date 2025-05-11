@@ -200,7 +200,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
 
     usar_datas = interval in ["1d", "1wk"]
     start_date = "2015-01-01"
-    end_date = datetime.now().strftime("%Y-%m-%d")
+    end_date = datetime.now(BR_TZ).strftime("%Y-%m-%d")
 
     for attempt in range(max_retries):
         try:
@@ -344,7 +344,7 @@ def criar_prediction_log_padrao(filepath="./prediction_log.csv", backup_dir="./p
             df_vazio.to_csv(filepath, index=False)
 
     # 🎯 Backup automático para segurança
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(BR_TZ).strftime("%Y%m%d_%H%M%S")
     backup_path = os.path.join(backup_dir, f"prediction_log_{timestamp}.csv")
     try:
         import shutil
@@ -2327,7 +2327,7 @@ def run_analysis(
                         results.append({
                             "Asset": asset,
                             "Timeframe": interval,
-                            "Date": datetime.now(),
+                            "Date": datetime.now(BR_TZ),
                             "Price": current_price,
                             "Signal": "Descartado",
                             "Reason": "Lucro líquido insuficiente após ajuste",
@@ -2353,7 +2353,7 @@ def run_analysis(
                         results.append({
                             "Asset": asset,
                             "Timeframe": interval,
-                            "Date": datetime.now(),
+                            "Date": datetime.now(BR_TZ),
                             "Price": current_price,
                             "Signal": "Descartado",
                             "Reason": "XGBoost não confirmou o sinal",
@@ -2373,7 +2373,7 @@ def run_analysis(
                     results.append({
                         "Asset": asset,
                         "Timeframe": interval,
-                        "Date": datetime.now(),
+                        "Date": datetime.now(BR_TZ),
                         "Price": current_price,
                         "Signal": 1,
                         "Reason": "Aceito",
@@ -2404,7 +2404,7 @@ def run_analysis(
             continue
 
     df_results = pd.DataFrame(results)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now(BR_TZ).strftime("%Y-%m-%d_%H-%M-%S")
     df_results.to_csv(f"./model_results_{timestamp}.csv", index=False)
 
     if not df_results.empty:
@@ -2705,7 +2705,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
 
     usar_datas = interval in ["1d", "1wk"]
     start_date = "2015-01-01"
-    end_date = datetime.now().strftime("%Y-%m-%d")
+    end_date = datetime.now(BR_TZ).strftime("%Y-%m-%d")
 
     for attempt in range(max_retries):
         try:
@@ -2719,7 +2719,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             # 🔒 Validação completa
             if data.empty or len(data.index) == 0 or not isinstance(data.index, pd.DatetimeIndex):
                 raise ValueError(f"⚠️ Índice inválido (não datetime) para {asset} ({interval})")
-            if data.index.min().year < 2000 or data.index.max().year > datetime.now().year + 1:
+            if data.index.min().year < 2000 or data.index.max().year > datetime.now(BR_TZ).year + 1:
                 raise ValueError(f"⚠️ Índice fora do intervalo esperado para {asset} ({interval})")
 
             # Padroniza colunas
@@ -2803,7 +2803,7 @@ def criar_prediction_log_padrao(filepath="./prediction_log.csv", backup_dir="./p
             df_vazio.to_csv(filepath, index=False)
 
     # 🎯 Backup automático para segurança
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(BR_TZ).strftime("%Y%m%d_%H%M%S")
     backup_path = os.path.join(backup_dir, f"prediction_log_{timestamp}.csv")
     try:
         import shutil
@@ -4524,7 +4524,7 @@ def run_analysis(
                         results.append({
                             "Asset": asset,
                             "Timeframe": interval,
-                            "Date": datetime.now(),
+                            "Date": datetime.now(BR_TZ),
                             "Price": current_price,
                             "Signal": "Descartado",
                             "Reason": "Lucro líquido insuficiente após ajuste",
@@ -4550,7 +4550,7 @@ def run_analysis(
                         results.append({
                             "Asset": asset,
                             "Timeframe": interval,
-                            "Date": datetime.now(),
+                            "Date": datetime.now(BR_TZ),
                             "Price": current_price,
                             "Signal": "Descartado",
                             "Reason": "XGBoost não confirmou o sinal",
@@ -4570,7 +4570,7 @@ def run_analysis(
                     results.append({
                         "Asset": asset,
                         "Timeframe": interval,
-                        "Date": datetime.now(),
+                        "Date": datetime.now(BR_TZ),
                         "Price": current_price,
                         "Signal": 1,
                         "Reason": "Aceito",
@@ -4601,7 +4601,7 @@ def run_analysis(
             continue
 
     df_results = pd.DataFrame(results)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now(BR_TZ).strftime("%Y-%m-%d_%H-%M-%S")
     df_results.to_csv(f"./model_results_{timestamp}.csv", index=False)
 
     if not df_results.empty:
