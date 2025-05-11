@@ -2373,35 +2373,55 @@ def run_analysis(
                         features_xgb = get_feature_columns(df_input, include_lstm_pred=True)
                         xgb_signal = model_xgb.predict(df_input[features_xgb].fillna(0))[0]
 
+                    # === NOVA DECISÃO INCLUINDO JUSTIFICATIVA TÉCNICA ===
+                    reasons = []
+                    
+                    # Indicadores técnicos
+                    if 'RSI' in data[interval].columns:
+                        rsi = data[interval]['RSI'].iloc[-1]
+                        if rsi < 30:
+                            reasons.append("RSI em sobrevenda")
+                        elif rsi > 70:
+                            reasons.append("RSI em sobrecompra")
+                    
+                    if all(col in data[interval].columns for col in ['MA_9', 'MA_21']):
+                        ma9 = data[interval]['MA_9'].iloc[-1]
+                        ma21 = data[interval]['MA_21'].iloc[-1]
+                        if ma9 > ma21:
+                            reasons.append("Cruzamento de MMs para cima")
+                        elif ma9 < ma21:
+                            reasons.append("Cruzamento de MMs para baixo")
+                    
+                    if 'Doji' in data[interval].columns and data[interval]['Doji'].iloc[-1] == 1:
+                        reasons.append("Padrão Doji detectado")
+                    
+                    # Sinal via LSTM (mesmo sem XGBoost)
+                    variacao = (predicted_price_lstm - current_price) / current_price if current_price else 0
+                    if abs(variacao) > 0.01:  # Limiar de 1%
+                        signal = 'Compra' if predicted_price_lstm > current_price else 'Venda'
+                        reasons.append("LSTM prevê alta" if predicted_price_lstm > current_price else "LSTM prevê queda")
+                    else:
+                        signal = 'Descartado'
+                    
+                    # Se XGBoost estiver presente e bloqueia o sinal
                     if xgb_signal != 1:
-                        print("🚫 Trade descartado pelo XGBoost.")
-                        results.append({
-                            "Asset": asset,
-                            "Timeframe": interval,
-                            "Date": datetime.now(BR_TZ),
-                            "Price": current_price,
-                            "Signal": "Descartado",
-                            "Reason": "XGBoost não confirmou o sinal",
-                            "Predicted_Close": predicted_price_lstm,
-                            "Predicted_High": pred_high,
-                            "Predicted_Low": pred_low
-                        })
-                        continue
-
+                        reasons.append("Sem confirmação do XGBoost")
+                    
+                    # Ajuste e confiança
                     ajuste = adjust_signal_based_on_history(asset, interval)
                     val_score = model_xgb.validation_score if model_xgb and hasattr(model_xgb, "validation_score") else {}
-
+                    
                     entry1 = round(entry_price, 2)
                     entry2 = round(entry1 - 0.5, 2)
                     entry3 = round(entry1 - 1.0, 2)
-
+                    
                     results.append({
                         "Asset": asset,
                         "Timeframe": interval,
                         "Date": datetime.now(BR_TZ),
                         "Price": current_price,
-                        "Signal": 1,
-                        "Reason": "Aceito",
+                        "Signal": signal,
+                        "Reason": ", ".join(reasons),
                         "Confidence": None,
                         "AdjustedProb": round(ajuste, 2),
                         "TP1": tp1,
@@ -2420,6 +2440,7 @@ def run_analysis(
                         "LSTM_High_Predicted": pred_high,
                         "LSTM_Low_Predicted": pred_low
                     })
+
 
                 except Exception as e:
                     print(f"[!] Erro na análise de {asset} ({interval}): {e}")
