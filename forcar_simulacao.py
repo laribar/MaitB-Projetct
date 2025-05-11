@@ -1,10 +1,10 @@
-from main import simular_todos_trades, get_stock_data, calculate_indicators
+import pandas as pd
+from main import simular_todos_trades
 
-# Baixar candles históricos
-df_candles = get_stock_data("BTC-USD", interval="1h", period="90d")
-df_candles = calculate_indicators(df_candles)
+# 🔧 Carrega candles simulados manualmente
+df_candles = pd.read_pickle("df_candles_teste.pkl")
 
-# Rodar a simulação forçada
+# ✅ Rodar simulação de carteira com os dados de teste
 simular_todos_trades(
     prediction_log_path="prediction_log.csv",
     df_candles=df_candles,
