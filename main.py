@@ -210,15 +210,15 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
                 print(f"⏳ Usando period para {asset} ({interval}): {period}")
                 data = yf.download(asset, period=period, interval=interval, progress=False, auto_adjust=False)
 
-            # 🧼 Corrige o índice
+            # ✅ Força limpeza e correção do índice
             data = data.copy()
-            data = data[~data.index.duplicated()]
-            data.index = pd.to_datetime(data.index, errors='coerce')
+            data = data[~data.index.duplicated(keep="last")]
+            data.index = pd.to_datetime(data.index, errors="coerce")
             data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
-            data = data.loc[data.index.notnull()]  # remove índices inválidos
-
+            data = data[data.index.notnull()]
+            
             if data.empty or data.index.min().year < 2000:
-                raise ValueError(f"⚠️ Índice inválido ou dados vazios de {asset} ({interval})")
+                raise ValueError(f"⚠️ Índice inválido ou dados vazios: {asset} ({interval})")
 
             data = data[["Open", "High", "Low", "Close", "Volume"]]
             return data
@@ -228,6 +228,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             time.sleep(sleep_sec)
 
     raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
+
 
 
 
