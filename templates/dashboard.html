@@ -36,22 +36,23 @@
         <div class="card mb-4">
             <div class="card-header">📅 Selecionar Timeframe</div>
             <div class="card-body">
-                <form method="get">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-md-4">
-                            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
-                                {% for tf in timeframes %}
-                                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-auto">
-                            <form method="POST" action="{{ url_for('retrain') }}">
-                                <button class="btn btn-warning">🔁 Re-treinar agora</button>
-                            </form>
-                        </div>
+              <form method="get">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                            {% for tf in timeframes %}
+                                <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                </form>
+                    <div class="col-auto">
+                        <form method="POST" action="{{ url_for('retrain') }}">
+                            <button type="submit" class="btn btn-warning">🔁 Re-treinar agora</button>
+                        </form>
+                    </div>
+                </div>
+            </form>
+
             </div>
         </div>
 
