@@ -4597,21 +4597,6 @@ def run_analysis(
                         features_xgb = get_feature_columns(df_input, include_lstm_pred=True)
                         xgb_signal = model_xgb.predict(df_input[features_xgb].fillna(0))[0]
 
-                    if xgb_signal != 1:
-                        print("🚫 Trade descartado pelo XGBoost.")
-                        results.append({
-                            "Asset": asset,
-                            "Timeframe": interval,
-                            "Date": datetime.now(BR_TZ),
-                            "Price": current_price,
-                            "Signal": "Descartado",
-                            "Reason": "XGBoost não confirmou o sinal",
-                            "Predicted_Close": predicted_price_lstm,
-                            "Predicted_High": pred_high,
-                            "Predicted_Low": pred_low
-                        })
-                        continue
-
                     ajuste = adjust_signal_based_on_history(asset, interval)
                     val_score = model_xgb.validation_score if model_xgb and hasattr(model_xgb, "validation_score") else {}
 
