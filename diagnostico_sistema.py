@@ -8,7 +8,7 @@ import requests
 
 BR_TZ = pytz.timezone("America/Sao_Paulo")
 
-def verificar_flask_ativo(url="http://localhost:5000"):
+def verificar_flask_ativo(url="http://http://18.117.91.17:5000/"):
     print("\n🌐 Verificando status do servidor Flask...")
     try:
         response = requests.get(url, timeout=5)
