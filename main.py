@@ -2166,8 +2166,6 @@ def plotar_grafico_lucro(df):
 
     print("✅ Gráfico de lucro por confiança enviado.")
 
-
-
 def salvar_grafico_evolucao(log_path="prediction_log.csv"):
     import matplotlib.pyplot as plt
     import os
@@ -2181,9 +2179,8 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
         print("⚠️ Log de previsões vazio ou inválido.")
         return
 
-    # 🛡️ Nova proteção: checa se as colunas necessárias existem
-    if "Capital Atual" not in df.columns or "Resultado" not in df.columns:
-        print("📭 Sem dados de simulação para gerar gráfico de evolução.")
+    if not all(col in df.columns for col in ["Date", "Capital Atual", "Resultado"]):
+        print("⚠️ Colunas obrigatórias ausentes para gerar o gráfico.")
         return
 
     df = df.dropna(subset=["Date", "Capital Atual", "Resultado"])
@@ -2196,26 +2193,26 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
 
     plt.figure(figsize=(12, 6))
 
-    # Cores por tipo de resultado
+    # 🎨 Cores por tipo de resultado
     cor_map = {"TP1": "green", "SL": "red", "Sem alvo": "orange"}
     cores = df["Resultado"].map(cor_map).fillna("gray")
 
-    # Gráfico de pontos
-    plt.scatter(df["Date"], df["Capital Atual"], c=cores, edgecolors="black", s=70)
+    # 🔵 Gráfico de pontos com marcações de capital
+    plt.scatter(df["Date"], df["Capital Atual"], c=cores, edgecolors="black", s=70, label="Capital")
 
-    # Linha de evolução do capital
-    plt.plot(df["Date"], df["Capital Atual"], linestyle="--", color="blue", alpha=0.7)
+    # 📈 Linha de evolução
+    plt.plot(df["Date"], df["Capital Atual"], linestyle="--", color="blue", alpha=0.6)
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         plt.annotate(f"${row['Capital Atual']:.0f}", (row["Date"], row["Capital Atual"]),
                      textcoords="offset points", xytext=(0, 6), ha='center', fontsize=8)
 
-    plt.title("💰 Evolução da Carteira Virtual")
-    plt.xlabel("Data (BR)")
+    plt.title("💼 Evolução da Carteira Virtual")
+    plt.xlabel("Data")
     plt.ylabel("Capital ($)")
-    plt.xticks(rotation=45)
     plt.grid(True)
     plt.tight_layout()
+    plt.xticks(rotation=45)
 
     path = "/tmp/evolucao_carteira.png"
     plt.savefig(path)
@@ -2223,6 +2220,7 @@ def salvar_grafico_evolucao(log_path="prediction_log.csv"):
     plt.close()
 
     print(f"✅ Gráfico da carteira salvo: {path}")
+
 
 
 
