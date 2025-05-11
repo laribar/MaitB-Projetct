@@ -215,6 +215,9 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             data = data.copy()
             data = data[~data.index.duplicated(keep="last")]
             data.index = pd.to_datetime(data.index, errors="coerce")
+            data = data[data.index.notnull()]  # remove linhas com índice inválido
+            data.index = data.index.tz_localize("UTC").tz_convert(BR_TZ)
+
             data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
             data = data[data.index.notnull()]
             
