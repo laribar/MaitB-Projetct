@@ -1,12 +1,15 @@
-import pandas as pd
-from main import simular_todos_trades
+from main import get_stock_data
+import pytz
+from datetime import datetime, timedelta
 
-# 🔧 Carrega candles simulados manualmente
-df_candles = pd.read_pickle("df_candles_teste.pkl")
+BR_TZ = pytz.timezone("America/Sao_Paulo")
+start = datetime(2023, 12, 1, 10, 6, tzinfo=BR_TZ)
+end = start + timedelta(hours=5)
 
-# ✅ Rodar simulação de carteira com os dados de teste
-simular_todos_trades(
-    prediction_log_path="prediction_log.csv",
-    df_candles=df_candles,
-    timeframe="1h"
-)
+df_candles = get_stock_data("BTC-USD", interval="1h", period="90d")
+df_candles.index = pd.to_datetime(df_candles.index)
+df_candles.index = df_candles.index.tz_localize("UTC").tz_convert(BR_TZ)
+
+df_check = df_candles[(df_candles.index >= start) & (df_candles.index <= end)]
+print("\n🧪 Candles encontrados no intervalo desejado:")
+print(df_check)
