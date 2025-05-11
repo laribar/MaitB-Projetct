@@ -2686,16 +2686,20 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
                 print(f"⏳ Usando period para {asset} ({interval}): {period}")
                 data = yf.download(asset, period=period, interval=interval, progress=False, auto_adjust=False)
 
-            # ✅ Validação crítica do índice
-            if data.empty or len(data.index) == 0 or data.index.min().year < 2000:
-                raise ValueError(f"⚠️ Dados inválidos recebidos de {asset} ({interval}) — índice corrompido.")
+            # 🔒 Validação completa
+            if data.empty or len(data.index) == 0 or not isinstance(data.index, pd.DatetimeIndex):
+                raise ValueError(f"⚠️ Índice inválido (não datetime) para {asset} ({interval})")
+            if data.index.min().year < 2000 or data.index.max().year > datetime.now().year + 1:
+                raise ValueError(f"⚠️ Índice fora do intervalo esperado para {asset} ({interval})")
 
+            # Padroniza colunas
             if isinstance(data.columns, pd.MultiIndex):
                 data.columns = data.columns.get_level_values(0)
             data.columns = [col.split()[-1] if " " in col else col for col in data.columns]
             data = data.loc[:, ~data.columns.duplicated()]
             col_map = {col: std_col for col in data.columns for std_col in ["Open", "High", "Low", "Close", "Adj Close", "Volume"] if std_col.lower() in col.lower()}
             data = data.rename(columns=col_map)
+
             data = data[["Open", "High", "Low", "Close", "Volume"]]
             if not all(col in data.columns for col in ["Open", "High", "Low", "Close", "Volume"]):
                 raise ValueError(f"⚠️ Colunas necessárias ausentes em {asset} ({interval})")
@@ -2707,6 +2711,7 @@ def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec
             time.sleep(sleep_sec)
 
     raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
+
 
 
 
