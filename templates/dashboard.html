@@ -18,9 +18,11 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
         <a class="navbar-brand" href="#">📊 Dashboard de Trading</a>
         <div class="ms-auto d-flex align-items-center">
+            <a class="btn btn-outline-light me-2" href="{{ url_for('logs') }}">📄 Ver Logs</a>
             <span class="navbar-text text-white me-3">Olá, {{ usuario }}</span>
             <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
         </div>
+
     </nav>
 
     <div class="container mt-4">
