@@ -118,7 +118,14 @@
                                                     -
                                                 {% endif %}
                                             </td>
-                                            <td>{{ sinal['Date'] }}</td>
+                                            <td>
+                                                  {% if sinal['Date'] %}
+                                                    {{ sinal['Date'][:16].replace('T', ' ').replace(':00', '') }}
+                                                  {% else %}
+                                                    -
+                                                  {% endif %}
+                                                </td>
+
                                         </tr>
                                     {% endfor %}
                                 </tbody>
