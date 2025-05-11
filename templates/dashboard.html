@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <title>Dashboard de Trading</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar-brand { font-weight: bold; font-size: 1.4rem; }
+        .table th, .table td { vertical-align: middle; }
+        .card-header { background-color: #343a40; color: white; }
+        .highlight { font-weight: bold; }
+    </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
@@ -15,58 +23,110 @@
     </nav>
 
     <div class="container mt-4">
-        <h2 class="mb-4">📈 Últimos Valores Previstos vs Reais - Timeframe: {{ timeframe_selecionado }}</h2>
-
-        <form method="get" class="mb-4">
-            <label for="timeframe" class="form-label">Selecionar Timeframe:</label>
-            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
-                {% for tf in timeframes %}
-                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
-                {% endfor %}
-            </select>
-        </form>
-
-        {% if request.args.get('mensagem') %}
-            <div class="alert alert-info">{{ request.args.get('mensagem') }}</div>
-        {% endif %}
-
-        <form method="POST" action="{{ url_for('retrain') }}">
-            <button class="btn btn-warning mb-4">🔁 Re-treinar agora</button>
-        </form>
-
-        {% if sinais %}
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle text-center">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Data</th>
-                            <th>Ativo</th>
-                            <th>Valor Projetado</th>
-                            <th>Valor Real</th>
-                            <th>Confiança</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for sinal in sinais %}
-                            <tr>
-                                <td>{{ sinal['Date'] }}</td>
-                                <td>{{ sinal['Asset'] }}</td>
-                                <td>{{ "%.2f"|format(sinal['TargetPrice']|float) if sinal['TargetPrice'] else '-' }}</td>
-                                <td>{{ "%.2f"|format(sinal['Price']|float) if sinal['Price'] else '-' }}</td>
-                                <td>{{ "%.2f"|format(sinal['AdjustedProb']|float * 100) }}%</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        {% if mensagem %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                {{ mensagem }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        {% else %}
-            <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
         {% endif %}
 
-        <hr class="my-4">
+        <div class="card mb-4">
+            <div class="card-header">📅 Selecionar Timeframe</div>
+            <div class="card-body">
+                <form method="get">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                                {% for tf in timeframes %}
+                                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <form method="POST" action="{{ url_for('retrain') }}">
+                                <button class="btn btn-warning">🔁 Re-treinar agora</button>
+                            </form>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-        <h3>📊 Gráfico de Evolução da Carteira</h3>
-        <img src="{{ caminho_grafico }}" class="img-fluid border rounded" alt="Gráfico de Evolução da Carteira">
+        <div class="card mb-4">
+            <div class="card-header">📈 Últimos Sinais — <span class="highlight">{{ timeframe_selecionado }}</span></div>
+            <div class="card-body">
+                {% if sinais %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Ativo</th>
+                                    <th>Projetado</th>
+                                    <th>Real</th>
+                                    <th>Conf.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sinal in sinais %}
+                                    <tr>
+                                        <td>{{ sinal['Date'] }}</td>
+                                        <td>{{ sinal['Asset'] }}</td>
+                                        <td>{{ "%.2f"|format(sinal['TargetPrice']|float) if sinal['TargetPrice'] else '-' }}</td>
+                                        <td>{{ "%.2f"|format(sinal['Price']|float) if sinal['Price'] else '-' }}</td>
+                                        <td>{{ "%.1f"|format(sinal['AdjustedProb']|float * 100) }}%</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">📊 Evolução da Carteira Virtual</div>
+            <div class="card-body">
+                <canvas id="graficoCarteira" height="100"></canvas>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Se os dados estiverem disponíveis no template
+        const labels = [{% for sinal in sinais %}"{{ sinal['Date'] }}", {% endfor %}];
+        const dados = [{% for sinal in sinais %}{{ sinal['Capital Atual'] if sinal['Capital Atual'] else 'null' }}, {% endfor %}];
+
+        const ctx = document.getElementById('graficoCarteira').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Capital Atual ($)',
+                    data: dados,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { display: true, title: { display: true, text: 'Data' } },
+                    y: { display: true, title: { display: true, text: 'Capital ($)' } }
+                }
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
