@@ -4539,10 +4539,6 @@ def run_analysis(
                     models[interval] = load_xgb_model(asset, interval) or train_ml_model(df, asset=asset, interval=interval, verbose=True, force_retrain=True)
                     lstm_models[interval] = load_lstm_model(asset, interval) or (train_lstm_model_diario(df, asset=asset, interval=interval, window_size=60, force_retrain=True) if interval in ["1d", "1wk"] else train_lstm_model(df, asset=asset, interval=interval, window_size=20, force_retrain=True))
 
-            if all(model is None for model in models.values()):
-                print(f"⚠️ Nenhum modelo foi treinado para {asset}.")
-                continue
-
             for tf in selected_timeframes:
                 interval = tf['interval']
                 current_price = data[interval]["Close"].iloc[-1]
@@ -4588,16 +4584,48 @@ def run_analysis(
                     tp2 = entry_price + 2 * abs(entry_price - sl)
                     rr_ratio = round((tp1 - entry_price) / (entry_price - sl), 2) if entry_price != sl else None
 
-                    #model_xgb = models.get(interval)
-                    model_xgb = None
-                    xgb_signal = 1
-                    if model_xgb:
-                        df_input = data[interval].iloc[[-1]].copy()
-                        df_input["LSTM_PRED"] = predicted_price_lstm
-                        features_xgb = get_feature_columns(df_input, include_lstm_pred=True)
-                        xgb_signal = model_xgb.predict(df_input[features_xgb].fillna(0))[0]
+                    # === Decisão baseada em LSTM apenas ===
+                    reasons = []
+
+                    if 'RSI' in data[interval].columns:
+                        rsi = data[interval]['RSI'].iloc[-1]
+                        if rsi < 30:
+                            reasons.append("RSI em sobrevenda")
+                        elif rsi > 70:
+                            reasons.append("RSI em sobrecompra")
+
+                    if all(c in data[interval].columns for c in ["MA_9", "MA_21"]):
+                        ma9 = data[interval]["MA_9"].iloc[-1]
+                        ma21 = data[interval]["MA_21"].iloc[-1]
+                        if ma9 > ma21:
+                            reasons.append("Cruzamento de MMs para cima")
+                        elif ma9 < ma21:
+                            reasons.append("Cruzamento de MMs para baixo")
+
+                    if 'Doji' in data[interval].columns and data[interval]['Doji'].iloc[-1] == 1:
+                        reasons.append("Padrão Doji detectado")
+
+                    variacao = (predicted_price_lstm - current_price) / current_price if current_price else 0
+                    if abs(variacao) < 0.01:
+                        reasons.append("Variação prevista < 1%. Trade ignorado.")
+                        results.append({
+                            "Asset": asset,
+                            "Timeframe": interval,
+                            "Date": datetime.now(BR_TZ),
+                            "Price": current_price,
+                            "Signal": "Descartado",
+                            "Reason": ", ".join(reasons),
+                            "Predicted_Close": predicted_price_lstm,
+                            "Predicted_High": pred_high,
+                            "Predicted_Low": pred_low
+                        })
+                        continue
+
+                    signal = "Compra" if predicted_price_lstm > current_price else "Venda"
+                    reasons.append("LSTM prevê alta" if signal == "Compra" else "LSTM prevê queda")
 
                     ajuste = adjust_signal_based_on_history(asset, interval)
+                    model_xgb = models.get(interval)
                     val_score = model_xgb.validation_score if model_xgb and hasattr(model_xgb, "validation_score") else {}
 
                     entry1 = round(entry_price, 2)
@@ -4609,8 +4637,8 @@ def run_analysis(
                         "Timeframe": interval,
                         "Date": datetime.now(BR_TZ),
                         "Price": current_price,
-                        "Signal": 1,
-                        "Reason": "Aceito",
+                        "Signal": signal,
+                        "Reason": ", ".join(reasons),
                         "Confidence": None,
                         "AdjustedProb": round(ajuste, 2),
                         "TP1": tp1,
@@ -4651,7 +4679,6 @@ def run_analysis(
     salvar_carteira_virtual()
     exibir_status_carteira()
 
-    # 🔚 Gráficos
     for tf in selected_timeframes:
         interval = tf["interval"]
         for asset in ASSETS:
@@ -4669,16 +4696,16 @@ def run_analysis(
     except Exception as e:
         print(f"⚠️ Erro ao enviar gráfico da carteira: {e}")
 
-    # 🔁 Simular trades aceitos
     for tf in selected_timeframes:
         interval = tf["interval"]
         for asset in ASSETS:
             try:
-                df_candles = get_stock_data(asset, interval, tf["period"])
+                df_candles = get_stock_data(asset, interval=interval, period=tf["period"])
                 df_candles = calculate_indicators(df_candles)
                 simular_todos_trades(prediction_log_path=log_path, df_candles=df_candles, timeframe=interval)
             except Exception as e:
                 print(f"⚠️ Erro ao simular para {asset} ({interval}): {e}")
+
 
 
 
