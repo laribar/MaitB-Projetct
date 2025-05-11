@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import pandas as pd
 import os
 import shutil
-
+from flask import jsonify
 from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste o nome se o seu script principal for diferente
 
 # app.py
@@ -101,6 +101,47 @@ def retrain():
 
     return redirect(url_for('dashboard', mensagem=mensagem))
 
+# === Rota de healthcheck ===
+@app.route('/health')
+def health():
+    status = {
+        "status": "ok",
+        "timestamp": datetime.now(BR_TZ).isoformat(),
+        "prediction_log_exists": os.path.exists('prediction_log.csv'),
+        "csv_size_bytes": os.path.getsize('prediction_log.csv') if os.path.exists('prediction_log.csv') else 0
+    }
+    return jsonify(status)
+
+# === Rota de visualização de logs ===
+@app.route('/logs')
+def logs():
+    if 'usuario' not in session:
+        return redirect(url_for('login'))
+
+    df = pd.DataFrame()
+    timeframes = []
+    timeframe_selecionado = None
+    sinais = []
+
+    try:
+        if os.path.exists('prediction_log.csv') and os.path.getsize('prediction_log.csv') > 0:
+            df = pd.read_csv('prediction_log.csv')
+
+            if 'Timeframe' in df.columns:
+                timeframes = df['Timeframe'].dropna().unique().tolist()
+                timeframe_selecionado = request.args.get('timeframe', timeframes[0] if timeframes else None)
+
+                if timeframe_selecionado:
+                    df_filtrado = df[df['Timeframe'] == timeframe_selecionado]
+                    sinais = df_filtrado.sort_values(by='Date', ascending=False).to_dict(orient='records')
+    except Exception as e:
+        print(f"Erro ao carregar logs: {e}")
+
+    return render_template('logs.html',
+                           usuario=session['usuario'],
+                           timeframes=timeframes,
+                           timeframe_selecionado=timeframe_selecionado,
+                           sinais=sinais)
 # === Rota de logout ===
 @app.route('/logout')
 def logout():
