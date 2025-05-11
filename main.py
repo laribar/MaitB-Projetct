@@ -2126,7 +2126,6 @@ import os
 import pytz
 import pandas as pd
 from datetime import datetime, timedelta
-from config import carteira_virtual, BR_TZ
 
 def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=None, timeframe="15m"):
     print("📊 Rodando simulação de carteira virtual com sinais do log...")
