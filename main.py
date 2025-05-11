@@ -1040,14 +1040,26 @@ def generate_explanation(row, prediction, feature_importance=None):
         return f"⚠️ Erro ao gerar explicação: {str(e)}"
 
 def mover_graficos_para_static():
-    os.makedirs("static/images", exist_ok=True)
-    for arquivo in os.listdir("."):
-        if arquivo.endswith(".png") and "grafico" in arquivo or "evolucao" in arquivo:
-            shutil.copy(arquivo, f"static/images/{arquivo}")
-            print(f"✅ Copiado: {arquivo} -> static/images/")
+    import os
+    import shutil
 
-# Chame esta função após gerar os gráficos
-mover_graficos_para_static()
+    os.makedirs("static/images", exist_ok=True)
+
+    padroes = ["grafico", "evolucao", "projecao", "previsao_vs_real", "lucro_por_faixa"]
+    arquivos = [f for f in os.listdir(".") if f.endswith(".png") and any(p in f for p in padroes)]
+
+    if not arquivos:
+        print("⚠️ Nenhum gráfico encontrado para mover.")
+        return
+
+    for arquivo in arquivos:
+        destino = os.path.join("static/images", arquivo)
+        try:
+            shutil.copy(arquivo, destino)
+            print(f"✅ Gráfico movido para dashboard: {arquivo}")
+        except Exception as e:
+            print(f"❌ Erro ao mover {arquivo} ➜ {destino}: {e}")
+
 
 
 
