@@ -70,45 +70,59 @@
                                     <th>Data</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {% for sinal in sinais %}
-                                    {% set preco = sinal['Price']|float %}
-                                    {% set alvo = sinal['TargetPrice']|float %}
-                                    {% set variacao = ((alvo - preco) / preco * 100) if preco and alvo else None %}
-                                    {% if variacao is not none %}
-                                        {% if variacao > 1 %}
-                                            {% set status = 'Compra' %}
-                                            {% set cor = 'success' %}
-                                        {% elif variacao < -1 %}
-                                            {% set status = 'Venda' %}
-                                            {% set cor = 'danger' %}
-                                        {% else %}
-                                            {% set status = 'Neutro' %}
-                                            {% set cor = 'secondary' %}
-                                        {% endif %}
-                                    {% else %}
-                                        {% set status = '-' %}
-                                        {% set cor = 'light' %}
-                                    {% endif %}
-                                    <tr>
-                                        <td><strong>{{ sinal['Asset'] }}</strong></td>
-                                        <td>${{ "%.2f"|format(preco) if preco else '-' }}</td>
-                                        <td>${{ "%.2f"|format(alvo) if alvo else '-' }}</td>
-                                        <td>
-                                            {% if variacao is not none %}
-                                                <span class="text-{{ 'success' if variacao > 0 else 'danger' }}">
-                                                    {{ "%.2f"|format(variacao) }}%
-                                                </span>
+                                <tbody>
+                                    {% for sinal in sinais %}
+                                        {% set preco = sinal['Price']|float %}
+                                        {% set alvo = sinal['TargetPrice']|float %}
+                                        {% set prob = sinal['AdjustedProb'] %}
+                                        {% set variacao = ((alvo - preco) / preco * 100) if preco and alvo else None %}
+                                
+                                        {% if variacao is not none %}
+                                            {% if variacao > 1 %}
+                                                {% set status = 'Compra' %}
+                                                {% set cor = 'success' %}
+                                            {% elif variacao < -1 %}
+                                                {% set status = 'Venda' %}
+                                                {% set cor = 'danger' %}
                                             {% else %}
-                                                -
+                                                {% set status = 'Neutro' %}
+                                                {% set cor = 'secondary' %}
                                             {% endif %}
-                                        </td>
-                                        <td><span class="badge bg-{{ cor }}">{{ status }}</span></td>
-                                        <td>{{ "%.1f"|format(sinal['AdjustedProb']|float * 100) if sinal['AdjustedProb'] else '-' }}%</td>
-                                        <td>{{ sinal['Date'] }}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
+                                        {% else %}
+                                            {% set status = '-' %}
+                                            {% set cor = 'light' %}
+                                        {% endif %}
+                                
+                                        <tr>
+                                            <td><strong>{{ sinal['Asset'] }}</strong></td>
+                                            <td>
+                                                {% if preco %} ${{ "%.2f"|format(preco) }} {% else %} - {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if alvo %} ${{ "%.2f"|format(alvo) }} {% else %} - {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if variacao is not none %}
+                                                    <span class="text-{{ 'success' if variacao > 0 else 'danger' }}">
+                                                        {{ "%.2f"|format(variacao) }}%
+                                                    </span>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-{{ cor }}">{{ status }}</span></td>
+                                            <td>
+                                                {% if prob is not none and prob != 'nan' %}
+                                                    {{ "%.1f"|format(prob|float * 100) }}%
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ sinal['Date'] }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+
                         </table>
                     </div>
                 {% else %}
