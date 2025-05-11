@@ -1870,7 +1870,8 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    df_log["Date"] = pd.to_datetime(df_log["Date"], errors="coerce", utc=True).dt.tz_convert(BR_TZ)
+    # ✅ Garante que a coluna Date esteja como datetime com timezone BR
+    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -1892,34 +1893,40 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     now = datetime.now(BR_TZ)
     resultados = []
 
-    for i, row in df_log.iterrows():
+    for _, row in df_log.iterrows():
         try:
             signal_time = row["Date"]
-            if pd.isna(signal_time):
-                print("⚠️ Data inválida no log: NaT")
-                continue
 
             if signal_time + intervalo_futuro > now:
                 continue
 
-            print(f"📆 Verificando range de df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
             print(f"📌 Sinal: {signal_time} ➔ {signal_time + intervalo_futuro}")
-            print("🔍 Simulando trade:")
-            print(row)
+            print(f"📆 Range df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
 
             resultado = simular_trade(row, df_candles, timeframe)
-
             if resultado:
-                for k, v in resultado.items():
-                    df_log.at[i, k] = v
+                resultados.append(resultado)
+            else:
+                print("⚠️ Resultado da simulação foi None.")
 
         except Exception as e:
-            print(f"Erro ao processar trade em {row.get('Date', 'desconhecido')}: {e}")
+            print(f"❌ Erro ao processar trade em {row.get('Date', 'desconhecido')}: {e}")
+
+    if not resultados:
+        print("⚠️ Nenhum trade foi simulado com sucesso.")
+        return
+
+    df_resultados = pd.DataFrame(resultados)
+
+    # ✅ Atualiza os campos no CSV original
+    for campo in ["Resultado", "LucroEstimado", "Capital Atual", "PrecoSaida", "DuracaoMin"]:
+        if campo in df_resultados.columns:
+            df_log[campo] = df_resultados[campo]
 
     df_log.to_csv(prediction_log_path, index=False)
     print(f"✅ Simulação concluída. Resultados atualizados em {prediction_log_path}")
-    salvar_grafico_evolucao(prediction_log_path)
 
+    salvar_grafico_evolucao(prediction_log_path)
 
 
 def simular_trade_com_entradas_em_grade(df_future, preco_entrada, tp1, sl, tipo='compra', capital=10000, max_entradas=3):
