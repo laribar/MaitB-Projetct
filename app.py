@@ -28,7 +28,6 @@ def login():
             return render_template('login.html', erro='Credenciais inválidas.')
     return render_template('login.html')
 
-# === Rota do dashboard ===
 @app.route('/dashboard')
 def dashboard():
     if 'usuario' not in session:
@@ -39,19 +38,22 @@ def dashboard():
     caminho_imagem_destino = 'static/images/evolucao_carteira_virtual.png'
     caminho_imagem_origem = 'evolucao_carteira_virtual.png'
 
-    # Gera gráfico da carteira se não existir
+    # === Verificação e geração do gráfico da carteira virtual ===
     if not os.path.exists(caminho_imagem_destino):
-        if os.path.exists(caminho_csv):
-            try:
+        try:
+            if os.path.exists(caminho_csv):
                 plotar_grafico_carteira_virtual()
-                os.makedirs('static/images', exist_ok=True)
-                if os.path.exists(caminho_imagem_origem):
-                    shutil.copy(caminho_imagem_origem, caminho_imagem_destino)
-                    print("✅ Gráfico da carteira gerado e movido.")
+                from main import mover_graficos_para_static
+                mover_graficos_para_static()
+
+                if os.path.exists(caminho_imagem_destino):
+                    print("✅ Gráfico da carteira movido para o dashboard.")
                 else:
-                    print("⚠️ Gráfico não foi gerado.")
-            except Exception as e:
-                print(f"⚠️ Erro ao gerar gráfico da carteira: {e}")
+                    print("⚠️ Gráfico não foi gerado ou movido corretamente.")
+            else:
+                print("⚠️ Arquivo de log não encontrado. Gráfico não será gerado.")
+        except Exception as e:
+            print(f"❌ Erro ao gerar ou mover gráfico da carteira: {e}")
 
     # Carregamento do CSV
     df = pd.DataFrame()
@@ -68,11 +70,13 @@ def dashboard():
                 if timeframe_selecionado:
                     df_filtrado = df[(df['Timeframe'] == timeframe_selecionado) & (df['LSTM_PRED_CLOSE'].notna())]
                     sinais = df_filtrado.to_dict(orient='records')
-
         except Exception as e:
             print(f"Erro ao carregar o prediction_log.csv: {e}")
 
     mensagem = request.args.get('mensagem')
+
+
+
 
     return render_template('dashboard.html',
                            usuario=session['usuario'],
