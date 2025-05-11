@@ -15,35 +15,34 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
-        <a class="navbar-brand" href="#">📊 Dashboard de Trading</a>
-        <div class="ms-auto d-flex align-items-center">
-            <a class="btn btn-outline-light me-2" href="{{ url_for('logs') }}">📄 Ver Logs</a>
-            <span class="navbar-text text-white me-3">Olá, {{ usuario }}</span>
-            <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark px-4">
+    <a class="navbar-brand" href="#">📊 Dashboard de Trading</a>
+    <div class="ms-auto d-flex align-items-center">
+        <a class="btn btn-outline-light me-2" href="{{ url_for('logs') }}">📄 Ver Logs</a>
+        <span class="navbar-text text-white me-3">Olá, {{ usuario }}</span>
+        <a class="btn btn-outline-light" href="{{ url_for('logout') }}">Sair</a>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    {% if mensagem %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ mensagem }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    </nav>
+    {% endif %}
 
-    <div class="container mt-4">
-        {% if mensagem %}
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                {{ mensagem }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endif %}
-
-        <div class="card mb-4">
-            <div class="card-header">📅 Selecionar Timeframe e Ações</div>
-            <div class="card-body">
+    <div class="card mb-4">
+        <div class="card-header">📅 Selecionar Timeframe e Ações</div>
+        <div class="card-body">
+            <form method="get">
                 <div class="row g-3 align-items-center">
                     <div class="col-md-4">
-                        <form method="get">
-                            <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
-                                {% for tf in timeframes %}
-                                    <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
-                                {% endfor %}
-                            </select>
-                        </form>
+                        <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                            {% for tf in timeframes %}
+                                <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="col-auto">
                         <form method="POST" action="{{ url_for('retrain') }}">
@@ -51,136 +50,130 @@
                         </form>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">📈 Últimos Sinais — <span class="highlight">{{ timeframe_selecionado }}</span></div>
-            <div class="card-body">
-                {% if sinais %}
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle text-center">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Ativo</th>
-                                    <th>Preço Atual</th>
-                                    <th>Preço Previsto</th>
-                                    <th>Variação</th>
-                                    <th>Status</th>
-                                    <th>Confiança</th>
-                                    <th>Data</th>
-                                    <th>Justificativa Técnica</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for sinal in sinais %}
-                                    {% set preco = sinal['Price']|float %}
-                                    {% set alvo = sinal['TargetPrice']|float %}
-                                    {% set prob = sinal['AdjustedProb'] %}
-                                    {% set variacao = ((alvo - preco) / preco * 100) if preco and alvo else None %}
-
-                                    {% if variacao is not none %}
-                                        {% if variacao > 1 %}
-                                            {% set status = 'Compra' %}
-                                            {% set cor = 'success' %}
-                                        {% elif variacao < -1 %}
-                                            {% set status = 'Venda' %}
-                                            {% set cor = 'danger' %}
-                                        {% else %}
-                                            {% set status = 'Neutro' %}
-                                            {% set cor = 'secondary' %}
-                                        {% endif %}
-                                    {% else %}
-                                        {% set status = '-' %}
-                                        {% set cor = 'light' %}
-                                    {% endif %}
-
-                                    <tr>
-                                        <td><strong>{{ sinal['Asset'] }}</strong></td>
-                                        <td>{% if preco %} ${{ "%.2f"|format(preco) }} {% else %} - {% endif %}</td>
-                                        <td>{% if alvo %} ${{ "%.2f"|format(alvo) }} {% else %} - {% endif %}</td>
-                                        <td>
-                                            {% if variacao is not none %}
-                                                <span class="text-{{ 'success' if variacao > 0 else 'danger' }}">
-                                                    {{ "%.2f"|format(variacao) }}%
-                                                </span>
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </td>
-                                        <td><span class="badge bg-{{ cor }}">{{ status }}</span></td>
-                                        <td>
-                                            {% if prob is not none and prob != 'nan' %}
-                                                {{ "%.1f"|format(prob|float * 100) }}%
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if sinal['Date'] %}
-                                                {{ sinal['Date'][:16].replace('T', ' ').replace(':00', '') }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </td>
-                                        <td style="text-align:left; max-width: 400px;">
-                                            {% if sinal['Reason'] %}
-                                                {{ sinal['Reason'] }}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">📊 Evolução da Carteira Virtual</div>
-            <div class="card-body">
-                <canvas id="graficoCarteira" height="100"></canvas>
-            </div>
+            </form>
         </div>
     </div>
 
-    <script>
-        const labels = [{% for sinal in sinais %}"{{ sinal['Date'] }}",{% endfor %}];
-        const dados = [{% for sinal in sinais %}{{ sinal['Capital Atual'] if sinal['Capital Atual'] else 'null' }},{% endfor %}];
+    <div class="card mb-4">
+        <div class="card-header">📈 Últimos Sinais — <span class="highlight">{{ timeframe_selecionado }}</span></div>
+        <div class="card-body">
+            {% if sinais %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle text-center">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Ativo</th>
+                                <th>Preço Atual</th>
+                                <th>Preço Previsto</th>
+                                <th>Variação</th>
+                                <th>Status</th>
+                                <th>Confiança</th>
+                                <th>Data</th>
+                                <th>Justificativa Técnica</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sinal in sinais %}
+                                {% set preco = sinal['Price']|float %}
+                                {% set alvo = sinal['TargetPrice']|float %}
+                                {% set prob = sinal['AdjustedProb'] %}
+                                {% set variacao = ((alvo - preco) / preco * 100) if preco and alvo else None %}
+                                {% set reason = sinal['Reason'] %}
+                                {% if variacao is not none %}
+                                    {% if variacao > 1 %}
+                                        {% set status = 'Compra' %}
+                                        {% set cor = 'success' %}
+                                    {% elif variacao < -1 %}
+                                        {% set status = 'Venda' %}
+                                        {% set cor = 'danger' %}
+                                    {% else %}
+                                        {% set status = 'Neutro' %}
+                                        {% set cor = 'secondary' %}
+                                    {% endif %}
+                                {% else %}
+                                    {% set status = '-' %}
+                                    {% set cor = 'light' %}
+                                {% endif %}
+                                <tr>
+                                    <td><strong>{{ sinal['Asset'] }}</strong></td>
+                                    <td>{{ "$%.2f"|format(preco) if preco else '-' }}</td>
+                                    <td>{{ "$%.2f"|format(alvo) if alvo else '-' }}</td>
+                                    <td>
+                                        {% if variacao is not none %}
+                                            <span class="text-{{ 'success' if variacao > 0 else 'danger' }}">
+                                                {{ "%.2f"|format(variacao) }}%
+                                            </span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="badge bg-{{ cor }}">{{ status }}</span></td>
+                                    <td>
+                                        {% if prob is not none and prob != 'nan' %}
+                                            {{ "%.1f"|format(prob|float * 100) }}%
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if sinal['Date'] %}
+                                            {{ sinal['Date'][:16].replace('T', ' ').replace(':00', '') }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-start">{{ reason if reason else '-' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
+            {% endif %}
+        </div>
+    </div>
 
-        const ctx = document.getElementById('graficoCarteira').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Capital Atual ($)',
-                    data: dados,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3
-                }]
+    <div class="card">
+        <div class="card-header">📊 Evolução da Carteira Virtual</div>
+        <div class="card-body">
+            <canvas id="graficoCarteira" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const labels = [{% for sinal in sinais %}"{{ sinal['Date'] }}",{% endfor %}];
+    const dados = [{% for sinal in sinais %}{{ sinal['Capital Atual'] if sinal['Capital Atual'] else 'null' }},{% endfor %}];
+
+    const ctx = document.getElementById('graficoCarteira').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Capital Atual ($)',
+                data: dados,
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true },
+                tooltip: { mode: 'index', intersect: false }
             },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: true },
-                    tooltip: { mode: 'index', intersect: false }
-                },
-                scales: {
-                    x: { display: true, title: { display: true, text: 'Data' } },
-                    y: { display: true, title: { display: true, text: 'Capital ($)' } }
-                }
+            scales: {
+                x: { display: true, title: { display: true, text: 'Data' } },
+                y: { display: true, title: { display: true, text: 'Capital ($)' } }
             }
-        });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        }
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
