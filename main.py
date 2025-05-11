@@ -2126,7 +2126,6 @@ import os
 import pytz
 import pandas as pd
 from datetime import datetime, timedelta
-from utils.helpers import safe_read_csv, salvar_carteira_virtual, plotar_grafico_lucro, salvar_grafico_evolucao
 from simulacao import simular_trade_com_entradas_em_grade
 from config import carteira_virtual, BR_TZ
 
