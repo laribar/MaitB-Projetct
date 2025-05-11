@@ -1776,40 +1776,33 @@ def exibir_status_carteira():
 
 def simular_trade(row, df):
     try:
-        asset = row["Asset"]
-        timeframe = row["Timeframe"]
-        signal_time = pd.to_datetime(row["Date"], utc=True).tz_convert(BR_TZ)
-
-        preco_entrada = float(row["Entry"])
-        tp1 = float(row["TP1"])
-        sl = float(row["SL"])
-
-        # ✅ Corrigir o índice do DataFrame
-        df.index = pd.to_datetime(df.index)
-        if df.index.tz is None:
-            df.index = df.index.tz_localize(pytz.UTC).tz_convert(BR_TZ)
-        else:
-            df.index = df.index.tz_convert(BR_TZ)
-
-        # ✅ Corrigir o tipo de signal_time
+        signal_time = pd.to_datetime(row["Date"])
         if isinstance(signal_time, np.ndarray):
             signal_time = signal_time[0]
-        if not isinstance(signal_time, pd.Timestamp):
-            signal_time = pd.to_datetime(signal_time)
         if signal_time.tzinfo is None:
             signal_time = signal_time.tz_localize(pytz.UTC).tz_convert(BR_TZ)
         else:
             signal_time = signal_time.tz_convert(BR_TZ)
 
+        preco_entrada = float(row["Entry"])
+        tp1 = float(row["TP1"])
+        sl = float(row["SL"])
+
+        df = df.copy()
+        df.index = pd.to_datetime(df.index)
+        if df.index.tz is None:
+            df.index = df.index.tz_localize(pytz.UTC)
+        df.index = df.index.tz_convert(BR_TZ)
+
         df_future = df[df.index > signal_time]
         if df_future.empty or not all(col in df_future.columns for col in ["High", "Low", "Close"]):
             raise ValueError("Candles futuros indisponíveis ou incompletos.")
 
-        # 🟡 Taxas e slippage
-        taxa_percentual = 0.001  # 0.1% por operação
-        slippage_percentual = 0.002  # 0.2% por operação
-
+        # parâmetros
+        taxa = 0.001
+        slippage = 0.002
         entrada_executada = False
+
         for i, (idx, candle) in enumerate(df_future.iterrows()):
             high = float(candle["High"])
             low = float(candle["Low"])
@@ -1817,79 +1810,56 @@ def simular_trade(row, df):
             if not entrada_executada:
                 if row["Signal"] == 1 and low <= preco_entrada:
                     preco_real_entrada = low
-                    entrada_executada = True
                     entrada_idx = idx
+                    entrada_executada = True
                 elif row["Signal"] == 0 and high >= preco_entrada:
                     preco_real_entrada = high
-                    entrada_executada = True
                     entrada_idx = idx
+                    entrada_executada = True
                 continue
 
             if entrada_executada:
-                preco_max = float(candle["High"])
-                preco_min = float(candle["Low"])
-
                 if row["Signal"] == 1:
-                    if preco_min <= sl:
-                        resultado = "SL"
+                    if low <= sl:
                         preco_saida = sl
+                        resultado = "SL"
                         break
-                    elif preco_max >= tp1:
-                        resultado = "TP1"
+                    elif high >= tp1:
                         preco_saida = tp1
+                        resultado = "TP1"
                         break
                 elif row["Signal"] == 0:
-                    if preco_max >= sl:
-                        resultado = "SL"
+                    if high >= sl:
                         preco_saida = sl
+                        resultado = "SL"
                         break
-                    elif preco_min <= tp1:
-                        resultado = "TP1"
+                    elif low <= tp1:
                         preco_saida = tp1
+                        resultado = "TP1"
                         break
         else:
             if entrada_executada:
-                resultado = "Sem alvo"
                 preco_saida = df_future["Close"].iloc[-1]
+                resultado = "Sem alvo"
             else:
-                return {
-                    "Resultado": "Sem execução",
-                    "PrecoSaida": None,
-                    "LucroEstimado": None,
-                    "DuracaoMin": None,
-                    "Capital Atual": carteira_virtual["capital_atual"],
-                    "Quantidade": None,
-                    "ROI": None,
-                    "Drawdown": None
-                }
+                return {"Resultado": "Sem execução", "PrecoSaida": None, "LucroEstimado": None,
+                        "DuracaoMin": None, "Capital Atual": carteira_virtual["capital_atual"],
+                        "Quantidade": None, "ROI": None, "Drawdown": None}
 
-        capital_disponivel = carteira_virtual["capital_atual"]
-        risco_por_trade = 0.01
+        capital = carteira_virtual["capital_atual"]
+        risco = 0.01
         risco_trade = abs(preco_real_entrada - sl)
-
-        if risco_trade <= 0:
-            capital_por_trade = capital_disponivel * 0.01
-        else:
-            capital_por_trade = (capital_disponivel * risco_por_trade) / risco_trade
-
-        quantidade = capital_por_trade
-        if quantidade * preco_real_entrada > capital_disponivel * 0.10:
-            quantidade = (capital_disponivel * 0.10) / preco_real_entrada
-
+        capital_trade = (capital * risco) / risco_trade if risco_trade > 0 else capital * 0.01
+        quantidade = min(capital_trade, capital * 0.10 / preco_real_entrada)
         quantidade = max(quantidade, 0.0001)
 
-        if row["Signal"] == 1:
-            lucro_total = (preco_saida - preco_real_entrada) * quantidade
-        else:
-            lucro_total = (preco_real_entrada - preco_saida) * quantidade
+        lucro = (preco_saida - preco_real_entrada) * quantidade if row["Signal"] == 1 else (preco_real_entrada - preco_saida) * quantidade
+        custo = (preco_real_entrada + preco_saida) * quantidade * (taxa + slippage)
+        lucro -= custo
 
-        custo_total = (preco_real_entrada + preco_saida) * quantidade * (taxa_percentual + slippage_percentual)
-        lucro_total -= custo_total
-
-        carteira_virtual["capital_atual"] += lucro_total
+        carteira_virtual["capital_atual"] += lucro
         carteira_virtual["historico_capital"].append(carteira_virtual["capital_atual"])
         carteira_virtual["capital_maximo"] = max(carteira_virtual["capital_maximo"], carteira_virtual["capital_atual"])
-
         drawdown = 1 - (carteira_virtual["capital_atual"] / carteira_virtual["capital_maximo"])
         roi = (carteira_virtual["capital_atual"] / carteira_virtual["capital_inicial"]) - 1
         duracao = (idx - entrada_idx).total_seconds() / 60 if entrada_executada else None
@@ -1897,26 +1867,19 @@ def simular_trade(row, df):
         return {
             "Resultado": resultado,
             "PrecoSaida": preco_saida,
-            "LucroEstimado": round(lucro_total, 2),
-            "DuracaoMin": round(duracao, 1) if duracao is not None else None,
+            "LucroEstimado": round(lucro, 2),
+            "DuracaoMin": round(duracao, 1) if duracao else None,
             "Capital Atual": round(carteira_virtual["capital_atual"], 2),
             "Quantidade": round(quantidade, 6),
             "ROI": round(roi * 100, 2),
             "Drawdown": round(drawdown * 100, 2)
         }
-
     except Exception as e:
         print(f"❌ Erro inesperado na simulação: {e}")
-        return {
-            "Resultado": "Erro",
-            "PrecoSaida": None,
-            "LucroEstimado": None,
-            "DuracaoMin": None,
-            "Capital Atual": carteira_virtual["capital_atual"],
-            "Quantidade": None,
-            "ROI": None,
-            "Drawdown": None
-        }
+        return {"Resultado": "Erro", "PrecoSaida": None, "LucroEstimado": None,
+                "DuracaoMin": None, "Capital Atual": carteira_virtual["capital_atual"],
+                "Quantidade": None, "ROI": None, "Drawdown": None}
+
 
 
 
@@ -2185,16 +2148,15 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ df_candles ausente ou vazio.")
         return
 
-    # ✅ Corrigir o índice do df_candles para datetime com timezone
+    df_candles = df_candles.copy()
     df_candles.index = pd.to_datetime(df_candles.index)
     if df_candles.index.tz is None:
         df_candles.index = df_candles.index.tz_localize(pytz.UTC)
     df_candles.index = df_candles.index.tz_convert(BR_TZ)
 
     intervalo_futuro = {
-        "15m": timedelta(minutes=15 * 5),
+        "15m": timedelta(minutes=75),
         "1h": timedelta(hours=5),
-        "4h": timedelta(hours=20),
         "1d": timedelta(days=5),
         "1wk": timedelta(weeks=5)
     }.get(timeframe, timedelta(hours=1))
@@ -2205,9 +2167,12 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     for _, row in df_log.iterrows():
         try:
             signal_time = pd.to_datetime(row["Date"])
+            if isinstance(signal_time, np.ndarray):
+                signal_time = signal_time[0]
             if signal_time.tzinfo is None:
-                signal_time = signal_time.tz_localize(pytz.UTC)
-            signal_time = signal_time.tz_convert(BR_TZ)
+                signal_time = signal_time.tz_localize(pytz.UTC).tz_convert(BR_TZ)
+            else:
+                signal_time = signal_time.tz_convert(BR_TZ)
 
             if (now - signal_time) < intervalo_futuro:
                 continue
@@ -2218,33 +2183,21 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
             tp1 = float(row["TP1"]) if pd.notna(row["TP1"]) else None
             sl = float(row["SL"]) if pd.notna(row["SL"]) else None
             entry = float(row["Entry"]) if pd.notna(row["Entry"]) else None
-
             if None in [tp1, sl, entry]:
                 continue
 
-            tipo = "compra" if int(row["Signal"]) == 1 else "venda"
-
-            # 🛠️ Comparação robusta entre timestamps com timezone
+            tipo = "compra"
             df_future = df_candles[df_candles.index > signal_time]
             if df_future.empty:
                 continue
 
-            resultado = simular_trade_com_entradas_em_grade(
-                df_future=df_future,
-                preco_entrada=entry,
-                tp1=tp1,
-                sl=sl,
-                tipo=tipo,
-                capital=carteira_virtual["capital_atual"]
-            )
-
+            resultado = simular_trade_com_entradas_em_grade(df_future, entry, tp1, sl, tipo, carteira_virtual["capital_atual"])
             for key, value in resultado.items():
                 row[key] = value
 
             carteira_virtual["capital_atual"] += row.get("lucro_real", 0.0)
             carteira_virtual["historico_capital"].append(carteira_virtual["capital_atual"])
             carteira_virtual["capital_maximo"] = max(carteira_virtual["capital_maximo"], carteira_virtual["capital_atual"])
-
             row["Capital Atual"] = round(carteira_virtual["capital_atual"], 2)
             row["LucroEstimado"] = round(row.get("lucro_real", 0.0), 2)
             row["Resultado"] = resultado.get("resultado")
@@ -2252,7 +2205,6 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
             row["Acertou"] = 1 if resultado.get("resultado") == "TP1" else 0 if resultado.get("resultado") == "SL" else None
 
             resultados.append(row)
-
         except Exception as e:
             print(f"❌ Erro inesperado na simulação: {e}")
             continue
@@ -2264,10 +2216,10 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     df_resultados = pd.DataFrame(resultados)
     df_resultados.to_csv(prediction_log_path, index=False)
     salvar_carteira_virtual()
-
-    print(f"📋 Log de previsões atualizado com resultados e capital: {prediction_log_path}")
+    print(f"📋 Log atualizado: {prediction_log_path}")
     plotar_grafico_lucro(df_resultados)
     salvar_grafico_evolucao()
+
 
 
 
