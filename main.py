@@ -1857,8 +1857,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    # ✅ Parsing robusto da data com milissegundos
-    df_log["Date"] = pd.to_datetime(df_log["Date"], errors="coerce")
+    df_log["Date"] = pd.to_datetime(df_log["Date"], errors="coerce", utc=True).dt.tz_convert(BR_TZ)
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -1880,41 +1879,32 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     now = datetime.now(BR_TZ)
     resultados = []
 
-    for _, row in df_log.iterrows():
+    for i, row in df_log.iterrows():
         try:
-            signal_time = pd.to_datetime(row["Date"], errors="coerce")
-
+            signal_time = row["Date"]
             if pd.isna(signal_time):
-                print(f"⚠️ Data inválida no log: {row.get('Date')}")
+                print("⚠️ Data inválida no log: NaT")
                 continue
-
-            # ✅ Corrige timezone do sinal manual
-            if signal_time.tzinfo is None:
-                signal_time = signal_time.tz_localize(BR_TZ)
-            else:
-                signal_time = signal_time.tz_convert(BR_TZ)
 
             if signal_time + intervalo_futuro > now:
                 continue
 
             print(f"📆 Verificando range de df_candles: {df_candles.index.min()} ➔ {df_candles.index.max()}")
             print(f"📌 Sinal: {signal_time} ➔ {signal_time + intervalo_futuro}")
+            print("🔍 Simulando trade:")
+            print(row)
 
             resultado = simular_trade(row, df_candles, timeframe)
+
             if resultado:
-                resultados.append(resultado)
+                for k, v in resultado.items():
+                    df_log.at[i, k] = v
 
         except Exception as e:
             print(f"Erro ao processar trade em {row.get('Date', 'desconhecido')}: {e}")
 
-    if not resultados:
-        print("⚠️ Nenhum trade foi simulado com sucesso.")
-        return
-
-    df_resultados = pd.DataFrame(resultados)
-    df_resultados.to_csv(prediction_log_path, index=False)
-    print(f"✅ Simulação concluída. Resultados salvos em {prediction_log_path}")
-
+    df_log.to_csv(prediction_log_path, index=False)
+    print(f"✅ Simulação concluída. Resultados atualizados em {prediction_log_path}")
     salvar_grafico_evolucao(prediction_log_path)
 
 
