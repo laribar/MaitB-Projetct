@@ -387,7 +387,7 @@ def criar_prediction_log_padrao(filepath="./prediction_log.csv", backup_dir="./p
   # 4. INDICADORES TÉCNICOS
   # ====================================================
 def calculate_indicators(data):
-    data = data.copy().reset_index(drop=True)
+    data = data.copy()
     for col in ["Open", "High", "Low", "Close", "Volume"]:
         data[col] = data[col].astype(float)
 
