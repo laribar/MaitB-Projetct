@@ -194,41 +194,63 @@ BINANCE_BASE_URL = "https://api.binance.com/api/v3/klines"
 # 3. COLETA DE DADOS
 # ====================================================
 def get_stock_data(asset, interval="15m", period="30d", max_retries=3, sleep_sec=5):
+    import yfinance as yf
     import time
     import pandas as pd
-    import yfinance as yf
+    from datetime import datetime
+    import pytz
 
     usar_datas = interval in ["1d", "1wk"]
     start_date = "2015-01-01"
-    end_date = datetime.now(BR_TZ).strftime("%Y-%m-%d")
+    end_date = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%Y-%m-%d")
 
     for attempt in range(max_retries):
         try:
             if usar_datas:
-                print(f"📅 Usando start/end para {asset} ({interval}): {start_date} ➔ {end_date}")
+                print(f"📅 [DEBUG] Usando start/end para {asset} ({interval}): {start_date} ➔ {end_date}")
                 data = yf.download(asset, start=start_date, end=end_date, interval=interval, progress=False, auto_adjust=False)
             else:
-                print(f"⏳ Usando period para {asset} ({interval}): {period}")
+                print(f"⏳ [DEBUG] Usando period para {asset} ({interval}): {period}")
                 data = yf.download(asset, period=period, interval=interval, progress=False, auto_adjust=False)
 
-            # ✅ Força limpeza e correção do índice
+            # Validação e limpeza
+            if data.empty:
+                raise ValueError("⚠️ DataFrame retornado está vazio.")
+
             data = data.copy()
             data = data[~data.index.duplicated(keep="last")]
             data.index = pd.to_datetime(data.index, errors="coerce")
-            data = data[data.index.notnull()]  # remove linhas com índice inválido
-            data.index = data.index.tz_localize("UTC").tz_convert(BR_TZ)
-
-            data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
             data = data[data.index.notnull()]
-            
-            if data.empty or data.index.min().year < 2000:
-                raise ValueError(f"⚠️ Índice inválido ou dados vazios: {asset} ({interval})")
 
-            data = data[["Open", "High", "Low", "Close", "Volume"]]
+            # Converte timezone
+            if data.index.tz is None:
+                data.index = data.index.tz_localize("UTC").tz_convert(pytz.timezone("America/Sao_Paulo"))
+            else:
+                data.index = data.index.tz_convert(pytz.timezone("America/Sao_Paulo"))
+
+            # Padroniza colunas
+            col_map = {
+                col: col.strip().title()
+                for col in data.columns
+                if col.lower() in ["open", "high", "low", "close", "volume"]
+            }
+            data.rename(columns=col_map, inplace=True)
+
+            # Filtro final de colunas obrigatórias
+            required_cols = ["Open", "High", "Low", "Close", "Volume"]
+            if not all(col in data.columns for col in required_cols):
+                raise ValueError(f"⚠️ Colunas obrigatórias ausentes em {asset} ({interval})")
+
+            data = data[required_cols].dropna()
+
+            if data.empty or data.index.min().year < 2000:
+                raise ValueError("⚠️ Índice de datas inválido ou dados insuficientes.")
+
+            print(f"✅ [DEBUG] Coleta concluída: {asset} ({interval}) ➜ {len(data)} registros | {data.index.min()} ➔ {data.index.max()}")
             return data
 
         except Exception as e:
-            print(f"❌ Tentativa {attempt+1} falhou para {asset} ({interval}): {e}")
+            print(f"❌ [Tentativa {attempt+1}] Falha ao baixar {asset} ({interval}): {e}")
             time.sleep(sleep_sec)
 
     raise RuntimeError(f"❌ Falha ao baixar dados de {asset} ({interval}) após {max_retries} tentativas.")
