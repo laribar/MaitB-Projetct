@@ -1857,7 +1857,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
         print("⚠️ Log vazio.")
         return
 
-    df_log["Date"] = pd.to_datetime(df_log["Date"], utc=True).dt.tz_convert(BR_TZ)
+    df_log["Date"] = pd.to_datetime(df_log["Date"])
 
     if df_candles is None or df_candles.empty:
         print("⚠️ df_candles ausente ou vazio.")
@@ -1881,12 +1881,11 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
 
     for _, row in df_log.iterrows():
         try:
-            signal_time = row["Date"]
-            if isinstance(signal_time, (np.ndarray, list)):
-                signal_time = signal_time[0]
-            signal_time = pd.to_datetime(signal_time)
+            signal_time = pd.to_datetime(row["Date"])
+
+            # ✅ Corrige timezone do sinal manual
             if signal_time.tzinfo is None:
-                signal_time = signal_time.tz_localize("UTC").tz_convert(BR_TZ)
+                signal_time = signal_time.tz_localize(BR_TZ)
             else:
                 signal_time = signal_time.tz_convert(BR_TZ)
 
@@ -1909,6 +1908,7 @@ def simular_todos_trades(prediction_log_path="prediction_log.csv", df_candles=No
     print(f"✅ Simulação concluída. Resultados salvos em {prediction_log_path}")
 
     salvar_grafico_evolucao(prediction_log_path)
+
 
 
 
