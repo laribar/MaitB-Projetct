@@ -1799,9 +1799,13 @@ def simular_trade(row, df_candles, timeframe):
 
     print("🔎 Candles futuros disponíveis:")
     print(df_future.head())
+    print("📊 Candles futuros encontrados entre", start_time, "e", end_time)
+    print(df_future.head(3))
 
     if df_future.empty or "High" not in df_future or "Low" not in df_future:
         return None
+    print("df_candles.index.min():", df_candles.index.min())
+    print("df_candles.index.max():", df_candles.index.max())
 
     resultado = "Sem alvo"
     lucro = 0.0
