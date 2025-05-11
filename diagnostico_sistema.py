@@ -8,18 +8,20 @@ import requests
 
 BR_TZ = pytz.timezone("America/Sao_Paulo")
 
-def verificar_flask_ativo(url="http://http://18.117.91.17:5000/"):
+def verificar_flask_ativo(url="http://18.117.91.17:5000/ping"):
     print("\n🌐 Verificando status do servidor Flask...")
+
     try:
         response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            print(f"✅ Flask ativo e respondendo em {url}")
+        if response.status_code == 200 and "pong" in response.text:
+            print(f"✅ Flask ativo e respondendo corretamente em {url}")
         else:
-            print(f"⚠️ Flask respondeu com status {response.status_code} — pode não estar funcionando corretamente.")
+            print(f"⚠️ Flask respondeu com status {response.status_code} ou conteúdo inesperado.")
     except requests.ConnectionError:
         print(f"❌ Flask não está acessível em {url} (conexão recusada).")
     except Exception as e:
         print(f"⚠️ Erro ao verificar o Flask: {e}")
+
 
 def check_log_file():
     print("📂 Verificando log.txt...")
