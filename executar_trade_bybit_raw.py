@@ -22,10 +22,17 @@ def gerar_assinatura(params, secret):
 
 def executar_ordem_market(symbol="BTCUSDT", side="Buy", valor_usdt=10):
     # Passo 1: Obter preço atual
-    preco_resp = requests.get(f"{BASE_URL}/v5/market/tickers", params={
-        "category": "spot",
-        "symbol": symbol
-    })
+    headers = {"User-Agent": "MaitB-Bot"}
+    
+    preco_resp = requests.get(
+        f"{BASE_URL}/v5/market/tickers",
+        params={
+            "category": "spot",
+            "symbol": symbol
+        },
+        headers=headers
+    )
+
     
     print("🔍 RESPOSTA DA API (raw):")
     print(preco_resp.status_code)
