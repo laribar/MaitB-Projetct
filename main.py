@@ -1775,6 +1775,9 @@ def exibir_status_carteira():
     print(f"• Drawdown Atual : {drawdown:.2f}%\n")
 
 def simular_trade(row, df_candles, timeframe):
+    print("🔍 Simulando trade:")
+    print(row)
+
     signal_time = row["Date"]
     entry_price = row.get("EntryPrice", row.get("Low", np.nan))
     target_price = row.get("TargetPrice", np.nan)
@@ -1793,6 +1796,9 @@ def simular_trade(row, df_candles, timeframe):
     start_time = signal_time
     end_time = signal_time + future_window
     df_future = df_candles[(df_candles.index >= start_time) & (df_candles.index <= end_time)]
+
+    print("🔎 Candles futuros disponíveis:")
+    print(df_future.head())
 
     if df_future.empty or "High" not in df_future or "Low" not in df_future:
         return None
