@@ -1142,29 +1142,24 @@ def enviar_grafico_previsao_futura(df_previsao, timeframe, asset):
 
 
 
-import mplfinance as mpf
-import pandas as pd
-from datetime import timedelta
-
-import mplfinance as mpf
-import pandas as pd
-from datetime import timedelta
-
-import mplfinance as mpf
-import pandas as pd
-from datetime import timedelta
-import matplotlib.pyplot as plt
 
 def plotar_candles_com_previsao(df_candles, pred_lstm_dicts, asset="BTC-USD", timeframe="1h"):
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     from datetime import timedelta
+    import mplfinance as mpf
+    import pandas as pd
 
     if df_candles.empty or not pred_lstm_dicts:
         print("⚠️ Dados insuficientes para plotar previsão futura.")
         return
 
-    df_plot = df_candles.copy().tail(10).reset_index()
+    # Garantir presença da coluna Date
+    if "Date" not in df_candles.columns:
+        df_candles = df_candles.copy()
+        df_candles["Date"] = df_candles.index
+
+    df_plot = df_candles.copy().tail(10).reset_index(drop=True)
     df_plot = df_plot[["Date", "Open", "High", "Low", "Close"]]
     df_plot["Volume"] = 0  # placeholder para mplfinance
 
@@ -1179,6 +1174,11 @@ def plotar_candles_com_previsao(df_candles, pred_lstm_dicts, asset="BTC-USD", ti
     delta = delta_map.get(timeframe, timedelta(hours=1))
 
     for i, pred in enumerate(pred_lstm_dicts):
+        # Verificação de valores nulos
+        if any(pred.get(k) is None for k in ["High", "Low", "Close"]):
+            print(f"⚠️ Previsão futura inválida (valores nulos) para {asset} {timeframe}.")
+            continue
+
         future_time = last_date + delta * (i + 1)
         candle = {
             "Date": future_time,
@@ -1193,13 +1193,19 @@ def plotar_candles_com_previsao(df_candles, pred_lstm_dicts, asset="BTC-USD", ti
     df_plot["Date"] = pd.to_datetime(df_plot["Date"])
     df_plot.set_index("Date", inplace=True)
 
-    import mplfinance as mpf
     mc = mpf.make_marketcolors(up='g', down='r', inherit=True)
     s = mpf.make_mpf_style(marketcolors=mc, gridstyle=':', facecolor='white')
     path = f"./candle_proj_{asset.replace('-', '')}_{timeframe}.png"
 
+    # 🔄 Salva o gráfico
     mpf.plot(df_plot, type='candle', style=s, title=f"🔮 Projeção LSTM — {asset} ({timeframe})", ylabel='Preço', volume=False, savefig=path)
     print(f"✅ Gráfico de projeção futura salvo: {path}")
+
+    # 🧭 Move para pasta do dashboard
+    try:
+        mover_graficos_para_static()
+    except Exception as e:
+        print(f"⚠️ Erro ao mover gráfico para static/images/: {e}")
 
 
 
