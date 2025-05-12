@@ -132,15 +132,16 @@
                 <div class="row">
                     {% for sinal in sinais %}
                         {% set ativo = sinal['Asset'].replace('-', '') %}
-                        {% set img_path = 'static/images/candle_proj_' + ativo + '_' + timeframe_selecionado + '.png' %}
+                        {% set img_filename = 'candle_proj_' + ativo + '_' + timeframe_selecionado + '.png' %}
+                        {% set img_path = 'static/images/' + img_filename %}
                         <div class="col-md-6 mb-4">
                             <div class="card shadow-sm">
                                 <div class="card-header bg-primary text-white">
                                     🔮 Previsão LSTM — {{ sinal['Asset'] }} ({{ timeframe_selecionado }})
                                 </div>
                                 <div class="card-body text-center">
-                                    {% if img_path and img_path|length > 0 %}
-                                        <img src="{{ url_for('static', filename='images/candle_proj_' + ativo + '_' + timeframe_selecionado + '.png') }}"
+                                    {% if img_filename in os.listdir('static/images') %}
+                                        <img src="{{ url_for('static', filename='images/' + img_filename) }}"
                                              alt="Gráfico {{ ativo }} {{ timeframe_selecionado }}"
                                              class="img-fluid rounded" style="max-height: 360px;">
                                     {% else %}
