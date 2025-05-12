@@ -1801,7 +1801,7 @@ def simular_trade(row, df_candles, timeframe):
             print("⚠️ Informações de trade incompletas (Entry, TP ou SL ausentes).")
             return None
 
-        # 🔁 Define janela futura conforme o timeframe
+        # 🔁 Janela futura baseada no timeframe
         future_window = {
             "15m": timedelta(minutes=75),
             "1h": timedelta(hours=5),
@@ -1809,14 +1809,12 @@ def simular_trade(row, df_candles, timeframe):
             "1wk": timedelta(weeks=5)
         }.get(timeframe, timedelta(hours=1))
 
-        # 🔒 Index e timezone
         df_candles.index = pd.to_datetime(df_candles.index)
         if df_candles.index.tz is None:
             df_candles.index = df_candles.index.tz_localize("UTC").tz_convert(BR_TZ)
         else:
             df_candles.index = df_candles.index.tz_convert(BR_TZ)
 
-        # 🔎 Filtra candles futuros
         start_time = signal_time
         end_time = signal_time + future_window
         df_future = df_candles[(df_candles.index >= start_time) & (df_candles.index <= end_time)]
@@ -1825,7 +1823,6 @@ def simular_trade(row, df_candles, timeframe):
             print("⚠️ Nenhum dado futuro disponível para simulação.")
             return None
 
-        # 🧠 Simulação do trade
         resultado = "Sem alvo"
         lucro = 0.0
         preco_saida = None
@@ -1852,6 +1849,8 @@ def simular_trade(row, df_candles, timeframe):
         capital_final = capital_inicial + lucro
 
         return {
+            "Asset": row.get("Asset", ""),
+            "Timeframe": row.get("Timeframe", timeframe),
             "Date": signal_time,
             "Resultado": resultado,
             "LucroEstimado": round(lucro, 2),
@@ -1859,8 +1858,6 @@ def simular_trade(row, df_candles, timeframe):
             "DuracaoMin": round(duracao, 2) if duracao else None,
             "Capital Atual": round(capital_final, 2),
             "Tipo": row.get("Tipo", ""),
-            "Asset": row.get("Asset", ""),
-            "Interval": timeframe,
             "EntryPrice": entry_price,
             "TargetPrice": target_price,
             "StopLoss": stop_loss,
@@ -1869,6 +1866,7 @@ def simular_trade(row, df_candles, timeframe):
     except Exception as e:
         print(f"❌ Erro ao simular trade: {e}")
         return None
+
 
 
 from datetime import datetime, timedelta
