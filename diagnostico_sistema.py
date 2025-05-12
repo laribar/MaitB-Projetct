@@ -1,14 +1,18 @@
-# diagnostico_sistema.py
 import os
 import pandas as pd
 from datetime import datetime
 from pytz import timezone
+import subprocess
 
+# Configurações
 BR_TZ = timezone("America/Sao_Paulo")
 LOG_PATH = "./log.txt"
 CSV_PATH = "./prediction_log.csv"
 MODELS_DIR = "./models"
+STATIC_IMG_DIR = "./static/images"
+GRAFICOS_CHAVE = ["candle_proj_", "previsao_vs_real", "evolucao_carteira"]
 
+# Funções de diagnóstico
 def print_header():
     print("🧪 Diagnóstico do Sistema de Trading (LSTM + XGBoost)")
     print("=" * 55)
@@ -75,6 +79,32 @@ def check_capital(df):
     print(f"• Capital Final  : ${capital_final:,.2f}")
     print(f"• ROI Total      : {roi:+.2f}%")
 
+def check_flask_server():
+    print("\n🌐 Verificando status do servidor Flask...")
+    try:
+        result = subprocess.check_output(["pgrep", "-f", "app.py"]).decode().strip()
+        if result:
+            print("✅ Flask em execução (PID(s):", result + ")")
+        else:
+            print("❌ Flask não está rodando.")
+    except subprocess.CalledProcessError:
+        print("❌ Flask não está rodando.")
+
+def check_graficos_static():
+    print("\n🖼️ Verificando presença dos gráficos no dashboard...")
+    if not os.path.exists(STATIC_IMG_DIR):
+        print("❌ Pasta de imagens não encontrada.")
+        return
+    arquivos = os.listdir(STATIC_IMG_DIR)
+    encontrados = [f for f in arquivos if any(chave in f for chave in GRAFICOS_CHAVE)]
+    if encontrados:
+        print(f"✅ Gráficos encontrados: {len(encontrados)}")
+        for f in encontrados:
+            print(f"  • {f}")
+    else:
+        print("⚠️ Nenhum gráfico encontrado no diretório static/images.")
+
+# Execução principal
 if __name__ == "__main__":
     print_header()
     check_log_file()
@@ -83,3 +113,5 @@ if __name__ == "__main__":
     if df_log is not None:
         check_ultimos_sinais(df_log)
         check_capital(df_log)
+    check_flask_server()
+    check_graficos_static()
