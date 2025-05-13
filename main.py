@@ -1578,27 +1578,43 @@ def enviar_grafico_lucro_por_confianca(log_path="./prediction_log.csv"):
         else:
             print(f"❌ Falha ao enviar gráfico: {response.status_code} - {response.text}")
 
-def adjust_signal_based_on_history(asset, timeframe, max_lookback=20, min_signals=5):
+def adjust_signal_based_on_history(asset, interval, log_path="prediction_log.csv", window=50):
+    """
+    Calcula uma probabilidade ajustada com base no desempenho histórico recente do modelo
+    para o par (asset, interval), usando uma janela móvel (ex: últimos 50 sinais).
+
+    Retorna um valor entre 0 e 1.
+    """
+    import pandas as pd
+    import os
+
+    if not os.path.exists(log_path) or os.path.getsize(log_path) == 0:
+        return 0.5  # valor neutro caso não haja histórico
+
     try:
-        df = safe_read_csv("prediction_log.csv")
-        if df is None:
-            print("⚠️ Ignorando leitura do prediction_log.csv pois está vazio ou ausente.")
-            return 1.0  # Retorna confiança padrão
+        df = pd.read_csv(log_path)
+        df = df[(df["Asset"] == asset) & (df["Timeframe"] == interval)]
 
-        df["Date"] = pd.to_datetime(df["Date"], utc=True).dt.tz_convert(BR_TZ)
+        # Garante colunas e remove nulos
+        if "Acertou" not in df.columns or df.empty:
+            return 0.5
 
-        df = df[(df["Asset"] == asset) & (df["Timeframe"] == timeframe)]
+        df = df.dropna(subset=["Acertou"])
+        df = df.tail(window)
 
-        if len(df) < min_signals or "Acertou" not in df.columns:
-            return 1.0
+        if df.empty:
+            return 0.5
 
-        recent = df.sort_values("Date", ascending=False).head(max_lookback)
-        acuracia = recent["Acertou"].mean()
-        return acuracia
+        # Converte para booleano se necessário
+        if df["Acertou"].dtype != bool:
+            df["Acertou"] = df["Acertou"].astype(str).str.lower().isin(["true", "1", "yes"])
 
+        taxa_acerto = df["Acertou"].mean()
+        return round(taxa_acerto, 2)
     except Exception as e:
-        print(f"⚠️ Erro ao ajustar com histórico: {e}")
-        return 1.0
+        print(f"⚠️ Erro em adjust_signal_based_on_history: {e}")
+        return 0.5
+
 
 def gerar_grafico_previsao_vs_real(log_path="./prediction_log.csv", output_path="/tmp/previsao_vs_real.png"):
     import matplotlib.pyplot as plt
@@ -2386,7 +2402,8 @@ def run_analysis(
                         reasons.append("Sem confirmação do XGBoost")
                     
                     # Ajuste e confiança
-                    ajuste = adjust_signal_based_on_history(asset, interval)
+                    ajuste = adjust_signal_based_on_history(asset, interval, log_path="prediction_log.csv")
+
                     val_score = model_xgb.validation_score if model_xgb and hasattr(model_xgb, "validation_score") else {}
                     
                     entry1 = round(entry_price, 2)
@@ -4534,7 +4551,8 @@ def run_analysis(
                     signal = "Compra" if predicted_price_lstm > current_price else "Venda"
                     reasons.append("LSTM prevê alta" if signal == "Compra" else "LSTM prevê queda")
 
-                    ajuste = adjust_signal_based_on_history(asset, interval)
+                    ajuste = adjust_signal_based_on_history(asset, interval, log_path="prediction_log.csv")
+
                     model_xgb = models.get(interval)
                     val_score = model_xgb.validation_score if model_xgb and hasattr(model_xgb, "validation_score") else {}
 
