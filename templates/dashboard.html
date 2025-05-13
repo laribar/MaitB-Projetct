@@ -35,20 +35,18 @@
     <div class="card mb-4">
         <div class="card-header">📅 Selecionar Timeframe e Ações</div>
         <div class="card-body">
-            <form method="get">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
-                            {% for tf in timeframes %}
-                                <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <form method="POST" action="{{ url_for('retrain') }}">
-                            <button type="submit" class="btn btn-warning">🔁 Re-treinar agora</button>
-                        </form>
-                    </div>
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <select id="timeframe" name="timeframe" class="form-select" onchange="this.form.submit()">
+                        {% for tf in timeframes %}
+                            <option value="{{ tf }}" {% if tf == timeframe_selecionado %}selected{% endif %}>{{ tf }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+            <form method="POST" action="{{ url_for('retrain') }}">
+                <div class="col-auto mt-3">
+                    <button type="submit" class="btn btn-warning">🔁 Re-treinar agora</button>
                 </div>
             </form>
         </div>
@@ -133,7 +131,6 @@
                     {% for sinal in sinais %}
                         {% set ativo = sinal['Asset'].replace('-', '') %}
                         {% set img_filename = 'candle_proj_' + ativo + '_' + timeframe_selecionado + '.png' %}
-                        {% set img_path = 'static/images/' + img_filename %}
                         <div class="col-md-6 mb-4">
                             <div class="card shadow-sm">
                                 <div class="card-header bg-primary text-white">
@@ -152,7 +149,6 @@
                         </div>
                     {% endfor %}
                 </div>
-
             {% else %}
                 <p class="text-muted">Nenhum sinal disponível para este timeframe.</p>
             {% endif %}
