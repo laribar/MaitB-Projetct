@@ -56,22 +56,25 @@ def dashboard():
     if os.path.exists(caminho_csv) and os.path.getsize(caminho_csv) > 0:
         try:
             df = pd.read_csv(caminho_csv)
-
+    
+            # ❗️ Coleta os timeframes de todo o CSV ANTES de filtrar
             if 'Timeframe' in df.columns:
-                timeframes = df['Timeframe'].dropna().unique().tolist()
+                timeframes = sorted(df['Timeframe'].dropna().unique().tolist())
                 timeframe_selecionado = request.args.get('timeframe', timeframes[0] if timeframes else None)
-
+    
+                # Agora sim, filtra apenas os sinais desse timeframe
                 if timeframe_selecionado:
                     df_filtrado = df[df['Timeframe'] == timeframe_selecionado]
-
+    
                     colunas_necessarias = ['Asset', 'Price', 'TargetPrice', 'AdjustedProb', 'Date', 'Capital Atual', 'Signal', 'Reason']
                     for col in colunas_necessarias:
                         if col not in df_filtrado.columns:
                             df_filtrado[col] = None
-
+    
                     df_filtrado = df_filtrado.sort_values(by='Date', ascending=False)
                     df_filtrado = df_filtrado.drop_duplicates(subset='Asset', keep='first')
                     sinais = df_filtrado.to_dict(orient='records')
+
 
         except Exception as e:
             print(f"⚠️ Erro ao carregar prediction_log.csv: {e}")
