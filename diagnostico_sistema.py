@@ -62,6 +62,22 @@ def check_ultimos_sinais(df):
     except Exception as e:
         print(f"⚠️ Erro ao analisar últimos sinais: {e}")
 
+
+
+print("\n🧠 Verificando processos Python ativos (main.py, app.py)...")
+try:
+    result = subprocess.check_output(["ps", "aux"])
+    lines = result.decode("utf-8").splitlines()
+    python_lines = [line for line in lines if "python" in line and ("main.py" in line or "app.py" in line)]
+
+    if not python_lines:
+        print("⚠️ Nenhum processo Python relacionado a main.py ou app.py está rodando.")
+    else:
+        for line in python_lines:
+            print(f"✅ {line}")
+except Exception as e:
+    print(f"❌ Erro ao verificar processos: {e}")
+
 def check_capital(df):
     print("\n💰 Verificando Capital da Carteira Virtual...")
     if "Capital Atual" not in df.columns:
