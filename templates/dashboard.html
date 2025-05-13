@@ -140,7 +140,7 @@
                                     🔮 Previsão LSTM — {{ sinal['Asset'] }} ({{ timeframe_selecionado }})
                                 </div>
                                 <div class="card-body text-center">
-                                    {% if img_filename in os.listdir('static/images') %}
+                                    {% if img_filename in imagens_disponiveis %}
                                         <img src="{{ url_for('static', filename='images/' + img_filename) }}"
                                              alt="Gráfico {{ ativo }} {{ timeframe_selecionado }}"
                                              class="img-fluid rounded" style="max-height: 360px;">
