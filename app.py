@@ -1,18 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import pandas as pd
 import os
-import shutil
-from flask import jsonify
-from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste o nome se o seu script principal for diferente
+from datetime import datetime
+import pytz
+from main import plotar_grafico_carteira_virtual, run_analysis  # ajuste se necessário
 
-# app.py
+# === Configurações ===
+BR_TZ = pytz.timezone("America/Sao_Paulo")
 app = Flask(__name__)
+app.secret_key = 'sua_chave_secreta'  # Trocar para valor seguro
 
+# === Rota de healthcheck simples ===
 @app.route("/ping")
 def ping():
     return "pong", 200
-
-app.secret_key = 'sua_chave_secreta'  # troque por algo seguro em produção
 
 # === Rota de login ===
 @app.route('/', methods=['GET', 'POST'])
@@ -27,7 +28,7 @@ def login():
             return render_template('login.html', erro='Credenciais inválidas.')
     return render_template('login.html')
 
-
+# === Dashboard principal ===
 @app.route('/dashboard')
 def dashboard():
     if 'usuario' not in session:
@@ -36,7 +37,7 @@ def dashboard():
     caminho_csv = 'prediction_log.csv'
     caminho_imagem_destino = 'static/images/evolucao_carteira_virtual.png'
 
-    # 🔁 Gera gráfico da carteira se ainda não existir
+    # Gera gráfico se necessário
     if not os.path.exists(caminho_imagem_destino):
         try:
             if os.path.exists(caminho_csv):
@@ -51,6 +52,7 @@ def dashboard():
     timeframe_selecionado = None
     sinais = []
 
+    # Coleta os sinais do CSV
     if os.path.exists(caminho_csv) and os.path.getsize(caminho_csv) > 0:
         try:
             df = pd.read_csv(caminho_csv)
@@ -74,6 +76,10 @@ def dashboard():
         except Exception as e:
             print(f"⚠️ Erro ao carregar prediction_log.csv: {e}")
 
+    # Lista de imagens disponíveis
+    image_dir = os.path.join('static', 'images')
+    imagens_disponiveis = os.listdir(image_dir) if os.path.exists(image_dir) else []
+
     mensagem = request.args.get('mensagem')
 
     return render_template('dashboard.html',
@@ -82,8 +88,8 @@ def dashboard():
                            timeframe_selecionado=timeframe_selecionado,
                            sinais=sinais,
                            caminho_grafico=caminho_imagem_destino,
+                           imagens_disponiveis=imagens_disponiveis,
                            mensagem=mensagem)
-
 
 # === Rota de re-treinamento manual ===
 @app.route('/retrain', methods=['POST'])
@@ -140,13 +146,13 @@ def logs():
                            timeframes=timeframes,
                            timeframe_selecionado=timeframe_selecionado,
                            sinais=sinais)
+
 # === Rota de logout ===
 @app.route('/logout')
 def logout():
     session.pop('usuario', None)
     return redirect(url_for('login'))
 
+# === Execução principal ===
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
