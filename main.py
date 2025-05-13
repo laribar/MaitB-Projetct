@@ -2350,7 +2350,7 @@ def run_analysis(
                         features_xgb = get_feature_columns(df_input, include_lstm_pred=True)
                         xgb_signal = model_xgb.predict(df_input[features_xgb].fillna(0))[0]
 
-                    # === NOVA DECISÃO INCLUINDO JUSTIFICATIVA TÉCNICA ===
+                   # === NOVA DECISÃO INCLUINDO JUSTIFICATIVA TÉCNICA ===
                     reasons = []
                     
                     # Indicadores técnicos
@@ -2379,6 +2379,7 @@ def run_analysis(
                         reasons.append("LSTM prevê alta" if predicted_price_lstm > current_price else "LSTM prevê queda")
                     else:
                         signal = 'Descartado'
+                        reasons.append("Variação prevista < 1%")
                     
                     # Se XGBoost estiver presente e bloqueia o sinal
                     if xgb_signal != 1:
@@ -2398,7 +2399,7 @@ def run_analysis(
                         "Date": datetime.now(BR_TZ),
                         "Price": current_price,
                         "Signal": signal,
-                        "Reason": ", ".join(reasons),
+                        "Reason": " | ".join(reasons),
                         "Confidence": None,
                         "AdjustedProb": round(ajuste, 2),
                         "TP1": tp1,
@@ -2417,6 +2418,7 @@ def run_analysis(
                         "LSTM_High_Predicted": pred_high,
                         "LSTM_Low_Predicted": pred_low
                     })
+
 
 
                 except Exception as e:
